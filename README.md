@@ -43,6 +43,7 @@ mvn -pl yss-filesys-boot -am spring-boot:run
 - 文件直链获取与直接下载
 - 存储平台与用户配置管理
 - 存储插件体系（插件元数据注册、实例缓存、门面调用、Local 内置插件）
+- 套餐管理（`subscription_plan`、`user_subscription`、`user_quota_usage`）
 - 文件分享创建/查询/取消
 - 分享公开页信息、验证提取码、文件列表、下载
 - 分享页面入口（`/share/{shareId}`）

@@ -147,3 +147,51 @@ CREATE TABLE IF NOT EXISTS sys_login_log (
   KEY idx_sys_login_log_user (user_id, login_time),
   KEY idx_sys_login_log_login_time (login_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统访问记录';
+
+-- changeset codex:10
+CREATE TABLE IF NOT EXISTS subscription_plan (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  plan_code varchar(50) NOT NULL COMMENT '套餐代码',
+  plan_name varchar(100) NOT NULL COMMENT '套餐名称',
+  description text DEFAULT NULL COMMENT '套餐描述',
+  storage_quota_gb int NOT NULL COMMENT '存储配额(GB)',
+  max_files int NOT NULL COMMENT '最大文件数',
+  max_file_size bigint NOT NULL COMMENT '单个文件最大大小(字节)',
+  bandwidth_quota bigint NOT NULL COMMENT '每月带宽配额(字节)',
+  price double(8,2) NOT NULL COMMENT '价格/月',
+  is_active tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否启用0否1是',
+  is_default tinyint(1) NOT NULL COMMENT '是否为默认套餐 0否1是',
+  sort_order int NOT NULL COMMENT '排序',
+  created_at datetime NOT NULL COMMENT '创建时间',
+  updated_at datetime NOT NULL COMMENT '更新时间',
+  del_flag tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除 0否1是',
+  PRIMARY KEY (id),
+  KEY idx_subscription_plan_active (is_active, is_default, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='套餐表';
+
+-- changeset codex:11
+CREATE TABLE IF NOT EXISTS user_subscription (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  user_id varchar(128) NOT NULL COMMENT '租户id',
+  plan_id bigint NOT NULL COMMENT '套餐id',
+  status tinyint(1) NOT NULL DEFAULT 0 COMMENT '订阅状态 0-生效中，1-已过期',
+  subscription_date datetime NOT NULL COMMENT '订阅日期',
+  expire_date datetime NOT NULL COMMENT '到期日期',
+  PRIMARY KEY (id),
+  KEY idx_user_subscription_plan (plan_id, status),
+  KEY idx_user_subscription_user (user_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户订阅表';
+
+-- changeset codex:12
+CREATE TABLE IF NOT EXISTS user_quota_usage (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  user_id varchar(128) NOT NULL COMMENT '用户ID',
+  storage_used int NOT NULL COMMENT '已使用存储(GB)',
+  files_count int NOT NULL COMMENT '文件数量',
+  bandwidth_used_month bigint NOT NULL COMMENT '带宽使用情况(按月统计)',
+  bandwidth_reset_date date DEFAULT NULL COMMENT '带宽重置日期',
+  last_calculated_at datetime NOT NULL COMMENT '最后统计时间',
+  updated_at datetime NOT NULL COMMENT '更新时间',
+  PRIMARY KEY (id),
+  KEY idx_user_quota_usage_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户配额使用情况表';
