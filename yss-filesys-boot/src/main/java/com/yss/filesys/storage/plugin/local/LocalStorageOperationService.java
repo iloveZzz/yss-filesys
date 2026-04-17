@@ -6,6 +6,7 @@ import com.yss.filesys.storage.plugin.core.annotation.StoragePlugin;
 import com.yss.filesys.storage.plugin.core.config.StorageConfig;
 import com.yss.filesys.storage.plugin.core.config.StorageUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -22,18 +23,19 @@ import java.util.Set;
 
 @Slf4j
 @Component
-@StoragePlugin(
-        identifier = StorageUtils.LOCAL_PLATFORM_IDENTIFIER,
-        name = "本地存储",
-        description = "本地文件系统存储",
-        icon = "folder",
-        isDefault = true,
-        configSchema = "{\"storageRoot\":\"/tmp/yss-filesys/storage\"}"
+    @StoragePlugin(
+            identifier = StorageUtils.LOCAL_PLATFORM_IDENTIFIER,
+            name = "本地存储",
+            description = "本地文件系统存储",
+            icon = "folder",
+            isDefault = true,
+            configSchema = "{\"storageRoot\":\"/tmp/yss-filesys/storage\"}"
 )
 public class LocalStorageOperationService extends AbstractStorageOperationService {
 
     private String storageRoot;
 
+    @Autowired
     public LocalStorageOperationService(@Value("${yss.files.storage-root:/tmp/yss-filesys/storage}") String defaultStorageRoot) {
         super(StorageConfig.builder()
                 .configId(null)
