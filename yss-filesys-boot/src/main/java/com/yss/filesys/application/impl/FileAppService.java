@@ -16,6 +16,7 @@ import com.yss.filesys.application.port.FileFavoriteUseCase;
 import com.yss.filesys.application.port.FileQueryUseCase;
 import com.yss.filesys.application.port.FileRecycleUseCase;
 import com.yss.filesys.application.query.FileSearchQuery;
+import com.yss.filesys.common.AnonymousUserContext;
 import com.yss.filesys.domain.gateway.FileRecordGateway;
 import com.yss.filesys.domain.gateway.FileShareItemGateway;
 import com.yss.filesys.domain.gateway.FileUserFavoriteGateway;
@@ -64,7 +65,7 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
                 .displayName(folderName)
                 .isDir(true)
                 .parentId(command.getParentId())
-                .userId(command.getUserId())
+                .userId(resolveUserId(command.getUserId()))
                 .storageSettingId(command.getStorageSettingId())
                 .uploadTime(now)
                 .updateTime(now)
@@ -82,8 +83,8 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void renameFile(String fileId, RenameFileCommand command) {
-        validateUser(command.getUserId());
-        FileRecord record = loadOwnedFile(fileId, command.getUserId());
+        String userId = resolveUserId(command.getUserId());
+        FileRecord record = loadOwnedFile(fileId, userId);
         String fileName = command.getFileName() == null ? "" : command.getFileName().trim();
         if (fileName.isEmpty()) {
             throw new BizException("文件名称不能为空");
@@ -98,12 +99,12 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void moveFile(MoveFileCommand command) {
-        validateUser(command.getUserId());
-        FileRecord record = loadOwnedFile(command.getFileId(), command.getUserId());
+        String userId = resolveUserId(command.getUserId());
+        FileRecord record = loadOwnedFile(command.getFileId(), userId);
         if (command.getTargetParentId() != null && !command.getTargetParentId().isBlank()) {
             FileRecord parent = fileRecordGateway.findById(command.getTargetParentId())
                     .orElseThrow(() -> new BizException("目标目录不存在: " + command.getTargetParentId()));
-            if (!command.getUserId().equals(parent.getUserId()) || !Boolean.TRUE.equals(parent.getIsDir())) {
+            if (!userId.equals(parent.getUserId()) || !Boolean.TRUE.equals(parent.getIsDir())) {
                 throw new BizException("目标目录无效");
             }
         }
@@ -116,8 +117,8 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void restore(RestoreRecycleCommand command) {
-        validateUser(command.getUserId());
-        Set<String> restoreIds = collectRecursiveIds(command.getUserId(), command.getFileIds(), true);
+        String userId = resolveUserId(command.getUserId());
+        Set<String> restoreIds = collectRecursiveIds(userId, command.getFileIds(), true);
         if (restoreIds.isEmpty()) {
             throw new BizException("未找到要恢复的文件");
         }
@@ -127,8 +128,8 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void permanentlyDelete(PermanentlyDeleteRecycleCommand command) {
-        validateUser(command.getUserId());
-        Set<String> deleteIds = collectRecursiveIds(command.getUserId(), command.getFileIds(), true);
+        String userId = resolveUserId(command.getUserId());
+        Set<String> deleteIds = collectRecursiveIds(userId, command.getFileIds(), true);
         if (deleteIds.isEmpty()) {
             throw new BizException("未找到要删除的文件");
         }
@@ -138,8 +139,8 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void clearRecycle(ClearRecycleCommand command) {
-        validateUser(command.getUserId());
-        List<FileRecord> deletedRecords = fileRecordGateway.listDeletedByUser(command.getUserId());
+        String userId = resolveUserId(command.getUserId());
+        List<FileRecord> deletedRecords = fileRecordGateway.listDeletedByUser(userId);
         if (deletedRecords.isEmpty()) {
             return;
         }
@@ -160,9 +161,7 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
 
     @Override
     public PageDTO<FileRecordDTO> search(FileSearchQuery query) {
-        if (query.getUserId() == null || query.getUserId().isBlank()) {
-            throw new BizException("userId 不能为空");
-        }
+        query.setUserId(resolveUserId(query.getUserId()));
         if (Boolean.TRUE.equals(query.getFavorite())) {
             List<String> favoriteIds = fileUserFavoriteGateway.listFileIdsByUserId(query.getUserId());
             if (favoriteIds.isEmpty()) {
@@ -196,7 +195,7 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
 
     @Override
     public List<FileRecordDTO> listDirs(String userId, String parentId) {
-        validateUser(userId);
+        userId = resolveUserId(userId);
         return fileRecordGateway.listByUserAndParentAndDeleted(userId, parentId, false).stream()
                 .filter(record -> Boolean.TRUE.equals(record.getIsDir()))
                 .map(record -> toDTO(record, false))
@@ -205,7 +204,7 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
 
     @Override
     public List<FileRecordDTO> getDirectoryTreePath(String userId, String dirId) {
-        validateUser(userId);
+        userId = resolveUserId(userId);
         if (dirId == null || dirId.isBlank()) {
             return List.of();
         }
@@ -226,6 +225,7 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
 
     @Override
     public String getFileUrl(String fileId, String userId, Integer expireSeconds) {
+        userId = resolveUserId(userId);
         FileRecord record = loadOwnedFile(fileId, userId);
         if (Boolean.TRUE.equals(record.getIsDir())) {
             throw new BizException("目录不支持下载");
@@ -233,7 +233,7 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
         if (record.getObjectKey() == null || record.getObjectKey().isBlank()) {
             throw new BizException("文件不存在或未上传完成");
         }
-        StringBuilder url = new StringBuilder("/api/files/download/").append(fileId).append("?userId=").append(userId);
+        StringBuilder url = new StringBuilder("/api/files/download/").append(fileId);
         if (expireSeconds != null && expireSeconds > 0) {
             url.append("&expireSeconds=").append(expireSeconds);
         }
@@ -242,6 +242,7 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
 
     @Override
     public FileDownloadDTO downloadFile(String fileId, String userId) {
+        userId = resolveUserId(userId);
         FileRecord record = loadOwnedFile(fileId, userId);
         if (Boolean.TRUE.equals(record.getIsDir())) {
             throw new BizException("目录不支持下载");
@@ -264,15 +265,15 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void favorite(FavoriteFilesCommand command) {
-        validateUser(command.getUserId());
-        Set<String> favoriteIds = collectFavoriteCandidates(command.getUserId(), command.getFileIds());
+        String userId = resolveUserId(command.getUserId());
+        Set<String> favoriteIds = collectFavoriteCandidates(userId, command.getFileIds());
         if (favoriteIds.isEmpty()) {
             throw new BizException("没有找到可收藏的文件");
         }
         LocalDateTime now = LocalDateTime.now();
         List<FileUserFavorite> favorites = favoriteIds.stream()
                 .map(fileId -> FileUserFavorite.builder()
-                        .userId(command.getUserId())
+                        .userId(userId)
                         .fileId(fileId)
                         .createdAt(now)
                         .build())
@@ -284,18 +285,18 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void unfavorite(FavoriteFilesCommand command) {
-        validateUser(command.getUserId());
+        String userId = resolveUserId(command.getUserId());
         Set<String> fileIds = normalizeFileIds(command.getFileIds());
         if (fileIds.isEmpty()) {
             return;
         }
-        fileUserFavoriteGateway.deleteByUserAndFileIds(command.getUserId(), fileIds);
+        fileUserFavoriteGateway.deleteByUserAndFileIds(userId, fileIds);
         touchFiles(fileIds, LocalDateTime.now());
     }
 
     @Override
     public long count(String userId) {
-        validateUser(userId);
+        userId = resolveUserId(userId);
         List<String> favoriteIds = fileUserFavoriteGateway.listFileIdsByUserId(userId);
         if (favoriteIds.isEmpty()) {
             return 0L;
@@ -321,12 +322,6 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
                 .uploadTime(record.getUploadTime())
                 .updateTime(record.getUpdateTime())
                 .build();
-    }
-
-    private void validateUser(String userId) {
-        if (userId == null || userId.isBlank()) {
-            throw new BizException("userId 不能为空");
-        }
     }
 
     private FileRecord loadOwnedFile(String fileId, String userId) {
@@ -433,5 +428,9 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
                 }
             }
         });
+    }
+
+    private String resolveUserId(String userId) {
+        return userId == null || userId.isBlank() ? AnonymousUserContext.userId() : userId;
     }
 }

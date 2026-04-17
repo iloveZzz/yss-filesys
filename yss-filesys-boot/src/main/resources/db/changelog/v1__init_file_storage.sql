@@ -132,23 +132,6 @@ CREATE TABLE IF NOT EXISTS file_share_access_records (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文件分享访问记录表';
 
 -- changeset codex:9
-CREATE TABLE IF NOT EXISTS sys_login_log (
-  id bigint NOT NULL AUTO_INCREMENT COMMENT '访问ID',
-  user_id varchar(100) DEFAULT NULL COMMENT '用户编号',
-  username varchar(50) NOT NULL DEFAULT '' COMMENT '用户账号',
-  login_ip varchar(50) NOT NULL COMMENT '登录IP',
-  login_address varchar(255) DEFAULT NULL COMMENT '登录地址',
-  browser varchar(255) DEFAULT NULL COMMENT '浏览器类型',
-  os varchar(512) NOT NULL COMMENT '操作系统',
-  status tinyint NOT NULL COMMENT '登录状态（0成功 1失败）',
-  msg varchar(255) NOT NULL COMMENT '提示消息',
-  login_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '登录时间',
-  PRIMARY KEY (id),
-  KEY idx_sys_login_log_user (user_id, login_time),
-  KEY idx_sys_login_log_login_time (login_time)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统访问记录';
-
--- changeset codex:10
 CREATE TABLE IF NOT EXISTS subscription_plan (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   plan_code varchar(50) NOT NULL COMMENT '套餐代码',
@@ -169,7 +152,7 @@ CREATE TABLE IF NOT EXISTS subscription_plan (
   KEY idx_subscription_plan_active (is_active, is_default, sort_order)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='套餐表';
 
--- changeset codex:11
+-- changeset codex:10
 CREATE TABLE IF NOT EXISTS user_subscription (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   user_id varchar(128) NOT NULL COMMENT '租户id',
@@ -182,7 +165,7 @@ CREATE TABLE IF NOT EXISTS user_subscription (
   KEY idx_user_subscription_user (user_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户订阅表';
 
--- changeset codex:12
+-- changeset codex:11
 CREATE TABLE IF NOT EXISTS user_quota_usage (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   user_id varchar(128) NOT NULL COMMENT '用户ID',

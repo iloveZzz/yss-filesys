@@ -27,12 +27,27 @@ import java.nio.file.Path;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+/**
+ * 文件流控制器
+ * <p>
+ * 提供文件流式传输接口，支持断点续传和压缩包内文件流传输
+ * </p>
+ */
 @RestController
 @RequestMapping("/api/files")
 public class FileStreamController {
 
+    /**
+     * 文件记录网关
+     */
     private final FileRecordGateway fileRecordGateway;
+    /**
+     * 预览令牌存储
+     */
     private final PreviewTokenStore previewTokenStore;
+    /**
+     * 存储服务门面
+     */
     private final StorageServiceFacade storageServiceFacade;
 
     public FileStreamController(FileRecordGateway fileRecordGateway,
@@ -43,6 +58,17 @@ public class FileStreamController {
         this.storageServiceFacade = storageServiceFacade;
     }
 
+    /**
+     * 文件流式传输
+     * <p>
+     * 支持断点续传，通过 Range 请求头实现
+     * </p>
+     *
+     * @param fileId       文件ID
+     * @param previewToken 预览令牌
+     * @param rangeHeader  Range请求头
+     * @return 文件流响应
+     */
     @GetMapping("/stream/{fileId}")
     public ResponseEntity<?> stream(@PathVariable String fileId,
                                     @RequestParam String previewToken,
@@ -84,6 +110,14 @@ public class FileStreamController {
         }
     }
 
+    /**
+     * 压缩包内文件流式传输
+     *
+     * @param archiveFileId 压缩包文件ID
+     * @param innerPath     压缩包内文件路径
+     * @param previewToken  预览令牌
+     * @return 文件流响应
+     */
     @GetMapping("/archive/stream/{archiveFileId}")
     public ResponseEntity<?> streamArchiveInner(@PathVariable String archiveFileId,
                                                 @RequestParam String innerPath,
@@ -130,6 +164,13 @@ public class FileStreamController {
         }
     }
 
+    /**
+     * 解析 Range 请求头
+     *
+     * @param rangeHeader Range请求头
+     * @param fileLength  文件总长度
+     * @return 起始和结束位置数组
+     */
     private long[] parseRange(String rangeHeader, long fileLength) {
         String range = rangeHeader.substring("bytes=".length());
         String[] parts = range.split("-", 2);
@@ -141,6 +182,12 @@ public class FileStreamController {
         return new long[]{start, end};
     }
 
+    /**
+     * 根据文件名获取内容类型
+     *
+     * @param name 文件名
+     * @return MIME类型
+     */
     private String contentTypeByName(String name) {
         String lower = name.toLowerCase();
         if (lower.endsWith(".png")) {

@@ -7,6 +7,7 @@ import com.yss.filesys.application.dto.StorageSettingDTO;
 import com.yss.filesys.application.port.StorageCommandUseCase;
 import com.yss.filesys.application.port.StorageQueryUseCase;
 import com.yss.filesys.common.ApiResponse;
+import com.yss.filesys.common.AnonymousUserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -16,17 +17,28 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * 存储平台配置控制器
+ * <p>
+ * 提供存储平台查询、存储配置管理等接口
+ * </p>
+ */
 @RestController
 @RequestMapping("/api/storage")
 @Tag(name = "存储平台配置")
 public class StorageController {
 
+    /**
+     * 存储查询用例
+     */
     private final StorageQueryUseCase storageQueryUseCase;
+    /**
+     * 存储命令用例
+     */
     private final StorageCommandUseCase storageCommandUseCase;
 
     public StorageController(StorageQueryUseCase storageQueryUseCase, StorageCommandUseCase storageCommandUseCase) {
@@ -34,24 +46,47 @@ public class StorageController {
         this.storageCommandUseCase = storageCommandUseCase;
     }
 
+    /**
+     * 查询存储平台列表
+     *
+     * @return 存储平台列表
+     */
     @GetMapping("/platforms")
     @Operation(summary = "查询存储平台列表")
     public ApiResponse<List<StoragePlatformDTO>> listPlatforms() {
         return ApiResponse.ok(storageQueryUseCase.listPlatforms());
     }
 
+    /**
+     * 按用户查询存储配置列表
+     * @return 存储配置列表
+     */
     @GetMapping("/settings")
     @Operation(summary = "按用户查询存储配置")
-    public ApiResponse<List<StorageSettingDTO>> listSettings(@RequestParam String userId) {
-        return ApiResponse.ok(storageQueryUseCase.listSettingsByUser(userId));
+    public ApiResponse<List<StorageSettingDTO>> listSettings() {
+        return ApiResponse.ok(storageQueryUseCase.listSettingsByUser(AnonymousUserContext.userId()));
     }
 
+    /**
+     * 新增或更新存储配置
+     *
+     * @param command 存储配置命令
+     * @return 存储配置信息
+     */
     @PostMapping("/settings")
     @Operation(summary = "新增或更新存储配置")
     public ApiResponse<StorageSettingDTO> upsert(@Valid @RequestBody UpsertStorageSettingCommand command) {
+        command.setUserId(AnonymousUserContext.userId());
         return ApiResponse.ok(storageCommandUseCase.upsert(command));
     }
 
+    /**
+     * 启用或禁用存储配置
+     *
+     * @param id      配置ID
+     * @param enabled 是否启用（1启用，0禁用）
+     * @return 操作结果
+     */
     @PutMapping("/settings/{id}/status/{enabled}")
     @Operation(summary = "启用或禁用存储配置")
     public ApiResponse<Void> updateStatus(@PathVariable String id, @PathVariable Integer enabled) {

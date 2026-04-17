@@ -38,10 +38,3 @@ yss:
     storage-root: /tmp/yss-filesys/storage
   preview:
     token-expire-seconds: 300
-
-sa-token:
-  token-name: Authorization
-  timeout: 2592000
-  active-timeout: -1
-  is-concurrent: true
-  is-share: true

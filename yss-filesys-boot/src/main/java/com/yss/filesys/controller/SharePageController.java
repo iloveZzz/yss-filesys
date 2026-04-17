@@ -13,16 +13,33 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
+/**
+ * 分享页面控制器
+ * <p>
+ * 提供分享页面渲染接口，返回 Thymeleaf 模板页面
+ * </p>
+ */
 @Slf4j
 @Controller
 public class SharePageController {
 
+    /**
+     * 文件分享查询用例
+     */
     private final FileShareQueryUseCase fileShareQueryUseCase;
 
     public SharePageController(FileShareQueryUseCase fileShareQueryUseCase) {
         this.fileShareQueryUseCase = fileShareQueryUseCase;
     }
 
+    /**
+     * 分享页面
+     *
+     * @param shareId   分享ID
+     * @param shareCode 提取码（可选）
+     * @param model     模型
+     * @return 模板名称
+     */
     @GetMapping("/share/{shareId}")
     public String sharePage(@PathVariable String shareId,
                             @RequestParam(required = false) String shareCode,

@@ -10,6 +10,7 @@ import com.yss.filesys.application.dto.FileShareThinDTO;
 import com.yss.filesys.application.port.FileShareCommandUseCase;
 import com.yss.filesys.application.port.FileShareAccessUseCase;
 import com.yss.filesys.application.port.FileShareQueryUseCase;
+import com.yss.filesys.common.AnonymousUserContext;
 import com.yss.filesys.domain.gateway.FileRecordGateway;
 import com.yss.filesys.domain.gateway.FileShareGateway;
 import com.yss.filesys.domain.gateway.FileShareAccessRecordGateway;
@@ -49,7 +50,7 @@ public class FileShareAppService implements FileShareCommandUseCase, FileShareQu
         String shareId = UUID.randomUUID().toString().replace("-", "");
         FileShareRecord record = FileShareRecord.builder()
                 .shareId(shareId)
-                .userId(command.getUserId())
+                .userId(resolveUserId(command.getUserId()))
                 .shareName(command.getShareName() == null || command.getShareName().isBlank() ? "共享文件" : command.getShareName())
                 .shareCode(Boolean.TRUE.equals(command.getNeedShareCode()) ? generateCode() : null)
                 .expireTime(resolveExpireTime(command))
@@ -76,9 +77,7 @@ public class FileShareAppService implements FileShareCommandUseCase, FileShareQu
 
     @Override
     public List<FileShareDTO> listByUserId(String userId) {
-        if (userId == null || userId.isBlank()) {
-            throw new BizException("userId 不能为空");
-        }
+        userId = resolveUserId(userId);
         return fileShareGateway.listByUserId(userId).stream().map(this::toDTO).toList();
     }
 
@@ -210,6 +209,10 @@ public class FileShareAppService implements FileShareCommandUseCase, FileShareQu
                 .createdAt(record.getCreatedAt())
                 .updatedAt(record.getUpdatedAt())
                 .build();
+    }
+
+    private String resolveUserId(String userId) {
+        return userId == null || userId.isBlank() ? AnonymousUserContext.userId() : userId;
     }
 
     private FileRecordDTO toFileDTO(FileRecord record) {

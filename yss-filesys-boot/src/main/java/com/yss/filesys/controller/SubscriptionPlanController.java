@@ -20,30 +20,57 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.validation.annotation.Validated;
 
+/**
+ * 套餐管理控制器
+ * <p>
+ * 提供套餐的增删改查接口
+ * </p>
+ */
 @RestController
 @RequestMapping("/api/plans")
 @Tag(name = "套餐管理")
 @Validated
 public class SubscriptionPlanController {
 
+    /**
+     * 套餐应用服务
+     */
     private final SubscriptionPlanAppService subscriptionPlanAppService;
 
     public SubscriptionPlanController(SubscriptionPlanAppService subscriptionPlanAppService) {
         this.subscriptionPlanAppService = subscriptionPlanAppService;
     }
 
+    /**
+     * 分页获取套餐列表
+     *
+     * @param query 查询条件
+     * @return 套餐分页数据
+     */
     @GetMapping("/pages")
     @Operation(summary = "分页获取套餐列表")
     public ApiResponse<PageDTO<SubscriptionPlanDTO>> getPages(SubscriptionPlanPageQuery query) {
         return ApiResponse.ok(subscriptionPlanAppService.page(query));
     }
 
+    /**
+     * 获取套餐详细信息
+     *
+     * @param id 套餐ID
+     * @return 套餐详情
+     */
     @GetMapping("/info/{id}")
     @Operation(summary = "获取套餐详细信息")
     public ApiResponse<SubscriptionPlanDTO> getDetail(@PathVariable Long id) {
         return ApiResponse.ok(subscriptionPlanAppService.detail(id));
     }
 
+    /**
+     * 添加套餐
+     *
+     * @param command 添加命令
+     * @return 操作结果
+     */
     @PostMapping
     @Operation(summary = "添加套餐")
     public ApiResponse<Void> add(@Valid @RequestBody SubscriptionPlanAddCommand command) {
@@ -51,6 +78,12 @@ public class SubscriptionPlanController {
         return ApiResponse.ok();
     }
 
+    /**
+     * 编辑套餐
+     *
+     * @param command 编辑命令
+     * @return 操作结果
+     */
     @PutMapping
     @Operation(summary = "编辑套餐")
     public ApiResponse<Void> edit(@Valid @RequestBody SubscriptionPlanEditCommand command) {
@@ -58,6 +91,12 @@ public class SubscriptionPlanController {
         return ApiResponse.ok();
     }
 
+    /**
+     * 根据ID删除套餐
+     *
+     * @param id 套餐ID
+     * @return 操作结果
+     */
     @DeleteMapping("/{id}")
     @Operation(summary = "根据ID删除套餐")
     public ApiResponse<Void> delete(@PathVariable Long id) {

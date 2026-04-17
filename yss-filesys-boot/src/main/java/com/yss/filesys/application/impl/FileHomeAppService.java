@@ -3,9 +3,9 @@ package com.yss.filesys.application.impl;
 import com.yss.filesys.application.dto.FileHomeDTO;
 import com.yss.filesys.application.dto.FileHomeUsedBytesDTO;
 import com.yss.filesys.application.port.FileHomeUseCase;
+import com.yss.filesys.common.AnonymousUserContext;
 import com.yss.filesys.domain.gateway.FileRecordGateway;
 import com.yss.filesys.domain.gateway.FileUserFavoriteGateway;
-import com.yss.filesys.domain.model.BizException;
 import com.yss.filesys.domain.model.FileRecord;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,9 +26,7 @@ public class FileHomeAppService implements FileHomeUseCase {
 
     @Override
     public FileHomeDTO getHome(String userId) {
-        if (userId == null || userId.isBlank()) {
-            throw new BizException("userId 不能为空");
-        }
+        userId = resolveUserId(userId);
         long fileCount = fileRecordGateway.countByUserAndDeleted(userId, false);
         long directoryCount = fileRecordGateway.listByUserAndDeleted(userId, false).stream()
                 .filter(record -> Boolean.TRUE.equals(record.getIsDir()))
@@ -49,6 +47,10 @@ public class FileHomeAppService implements FileHomeUseCase {
                 .totalBytes(totalBytes)
                 .usedBytes(usedBytes)
                 .build();
+    }
+
+    private String resolveUserId(String userId) {
+        return userId == null || userId.isBlank() ? AnonymousUserContext.userId() : userId;
     }
 
     private List<FileHomeUsedBytesDTO> buildUsedBytes(List<FileRecord> records) {

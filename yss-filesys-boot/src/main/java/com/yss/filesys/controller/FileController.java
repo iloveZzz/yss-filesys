@@ -17,6 +17,7 @@ import com.yss.filesys.application.port.FileQueryUseCase;
 import com.yss.filesys.application.port.FileRecycleUseCase;
 import com.yss.filesys.application.query.FileSearchQuery;
 import com.yss.filesys.common.ApiResponse;
+import com.yss.filesys.common.AnonymousUserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -37,14 +38,32 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+/**
+ * 文件管理控制器
+ * <p>
+ * 提供文件的增删改查、目录管理、回收站管理、收藏功能等接口
+ * </p>
+ */
 @RestController
 @RequestMapping("/api/files")
 @Tag(name = "文件管理")
 public class FileController {
 
+    /**
+     * 文件查询用例
+     */
     private final FileQueryUseCase fileQueryUseCase;
+    /**
+     * 文件命令用例
+     */
     private final FileCommandUseCase fileCommandUseCase;
+    /**
+     * 回收站用例
+     */
     private final FileRecycleUseCase fileRecycleUseCase;
+    /**
+     * 文件收藏用例
+     */
     private final FileFavoriteUseCase fileFavoriteUseCase;
 
     public FileController(FileQueryUseCase fileQueryUseCase,
@@ -57,17 +76,26 @@ public class FileController {
         this.fileFavoriteUseCase = fileFavoriteUseCase;
     }
 
+    /**
+     * 分页查询文件
+     * @param parentId 父目录ID
+     * @param keyword  搜索关键词
+     * @param deleted  是否已删除
+     * @param favorite 是否收藏
+     * @param pageNo   页码
+     * @param pageSize 每页大小
+     * @return 分页文件列表
+     */
     @GetMapping
     @Operation(summary = "分页查询文件")
-    public ApiResponse<PageDTO<FileRecordDTO>> search(@RequestParam String userId,
-                                                      @RequestParam(required = false) String parentId,
+    public ApiResponse<PageDTO<FileRecordDTO>> search(@RequestParam(required = false) String parentId,
                                                       @RequestParam(required = false) String keyword,
                                                       @RequestParam(required = false) Boolean deleted,
                                                       @RequestParam(required = false) Boolean favorite,
                                                       @RequestParam(defaultValue = "1") long pageNo,
                                                       @RequestParam(defaultValue = "20") long pageSize) {
         FileSearchQuery query = new FileSearchQuery();
-        query.setUserId(userId);
+        query.setUserId(AnonymousUserContext.userId());
         query.setParentId(parentId);
         query.setKeyword(keyword);
         query.setDeleted(deleted);
@@ -77,59 +105,101 @@ public class FileController {
         return ApiResponse.ok(fileQueryUseCase.search(query));
     }
 
+    /**
+     * 查询文件详情
+     *
+     * @param fileId 文件ID
+     * @return 文件详情
+     */
     @GetMapping("/{fileId}")
     @Operation(summary = "查询文件详情")
     public ApiResponse<FileRecordDTO> getById(@PathVariable String fileId) {
         return ApiResponse.ok(fileQueryUseCase.getById(fileId));
     }
 
+    /**
+     * 创建目录
+     *
+     * @param command 创建目录命令
+     * @return 创建的目录信息
+     */
     @PostMapping("/directory")
     @Operation(summary = "创建目录")
     public ApiResponse<FileRecordDTO> createDirectory(@Valid @RequestBody CreateDirectoryCommand command) {
+        command.setUserId(AnonymousUserContext.userId());
         return ApiResponse.ok(fileCommandUseCase.createDirectory(command));
     }
 
+    /**
+     * 查询目录列表
+     * @param parentId 父目录ID
+     * @return 目录列表
+     */
     @GetMapping("/dirs")
     @Operation(summary = "查询目录列表")
-    public ApiResponse<java.util.List<FileRecordDTO>> listDirs(@RequestParam String userId,
-                                                               @RequestParam(required = false) String parentId) {
-        return ApiResponse.ok(fileQueryUseCase.listDirs(userId, parentId));
+    public ApiResponse<java.util.List<FileRecordDTO>> listDirs(@RequestParam(required = false) String parentId) {
+        return ApiResponse.ok(fileQueryUseCase.listDirs(AnonymousUserContext.userId(), parentId));
     }
 
+    /**
+     * 文件重命名
+     *
+     * @param fileId  文件ID
+     * @param command 重命名命令
+     * @return 操作结果
+     */
     @PutMapping("/{fileId}/rename")
     @Operation(summary = "文件重命名")
     public ApiResponse<Void> renameFile(@PathVariable String fileId, @Valid @RequestBody RenameFileCommand command) {
+        command.setUserId(AnonymousUserContext.userId());
         fileCommandUseCase.renameFile(fileId, command);
         return ApiResponse.ok();
     }
 
+    /**
+     * 文件移动
+     *
+     * @param command 移动命令
+     * @return 操作结果
+     */
     @PutMapping("/moves")
     @Operation(summary = "文件移动")
     public ApiResponse<Void> moveFile(@Valid @RequestBody MoveFileCommand command) {
+        command.setUserId(AnonymousUserContext.userId());
         fileCommandUseCase.moveFile(command);
         return ApiResponse.ok();
     }
 
+    /**
+     * 获取目录层级路径
+     * @param dirId  目录ID
+     * @return 目录层级路径列表
+     */
     @GetMapping("/directory/{dirId}/path")
     @Operation(summary = "获取目录层级")
-    public ApiResponse<java.util.List<FileRecordDTO>> getDirectoryTreePath(@RequestParam String userId,
-                                                                           @PathVariable String dirId) {
-        return ApiResponse.ok(fileQueryUseCase.getDirectoryTreePath(userId, dirId));
+    public ApiResponse<java.util.List<FileRecordDTO>> getDirectoryTreePath(@PathVariable String dirId) {
+        return ApiResponse.ok(fileQueryUseCase.getDirectoryTreePath(AnonymousUserContext.userId(), dirId));
     }
 
+    /**
+     * 获取文件URL
+     * @return 文件访问URL
+     */
     @GetMapping("/url/{fileId}")
     @Operation(summary = "获取文件URL")
     public ApiResponse<String> getFileUrl(@PathVariable String fileId,
-                                          @RequestParam String userId,
                                           @RequestParam(required = false) Integer expireSeconds) {
-        return ApiResponse.ok(fileQueryUseCase.getFileUrl(fileId, userId, expireSeconds));
+        return ApiResponse.ok(fileQueryUseCase.getFileUrl(fileId, AnonymousUserContext.userId(), expireSeconds));
     }
 
+    /**
+     * 下载文件
+     * @return 文件内容
+     */
     @GetMapping("/download/{fileId}")
     @Operation(summary = "下载文件")
-    public ResponseEntity<byte[]> downloadFile(@PathVariable String fileId,
-                                               @RequestParam String userId) {
-        FileDownloadDTO download = fileQueryUseCase.downloadFile(fileId, userId);
+    public ResponseEntity<byte[]> downloadFile(@PathVariable String fileId) {
+        FileDownloadDTO download = fileQueryUseCase.downloadFile(fileId, AnonymousUserContext.userId());
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + URLEncoder.encode(download.getFileName(), StandardCharsets.UTF_8) + "\"")
@@ -138,6 +208,12 @@ public class FileController {
                 .body(download.getContent());
     }
 
+    /**
+     * 批量移入回收站
+     *
+     * @param command 移入回收站命令
+     * @return 操作结果
+     */
     @DeleteMapping("/recycle")
     @Operation(summary = "批量移入回收站")
     public ApiResponse<Void> moveToRecycle(@Valid @RequestBody MoveToRecycleBinCommand command) {
@@ -145,14 +221,20 @@ public class FileController {
         return ApiResponse.ok();
     }
 
+    /**
+     * 分页查询回收站文件
+     * @param keyword  搜索关键词
+     * @param pageNo   页码
+     * @param pageSize 每页大小
+     * @return 回收站文件列表
+     */
     @GetMapping("/recycle")
     @Operation(summary = "分页查询回收站文件")
-    public ApiResponse<PageDTO<FileRecordDTO>> recycle(@RequestParam String userId,
-                                                      @RequestParam(required = false) String keyword,
+    public ApiResponse<PageDTO<FileRecordDTO>> recycle(@RequestParam(required = false) String keyword,
                                                       @RequestParam(defaultValue = "1") long pageNo,
                                                       @RequestParam(defaultValue = "20") long pageSize) {
         FileSearchQuery query = new FileSearchQuery();
-        query.setUserId(userId);
+        query.setUserId(AnonymousUserContext.userId());
         query.setKeyword(keyword);
         query.setDeleted(true);
         query.setPageNo(pageNo);
@@ -160,44 +242,83 @@ public class FileController {
         return ApiResponse.ok(fileQueryUseCase.search(query));
     }
 
+    /**
+     * 恢复回收站文件
+     *
+     * @param command 恢复命令
+     * @return 操作结果
+     */
     @PutMapping("/recycle/restore")
     @Operation(summary = "恢复回收站文件")
     public ApiResponse<Void> restore(@Valid @RequestBody RestoreRecycleCommand command) {
+        command.setUserId(AnonymousUserContext.userId());
         fileRecycleUseCase.restore(command);
         return ApiResponse.ok();
     }
 
+    /**
+     * 永久删除回收站文件
+     *
+     * @param command 永久删除命令
+     * @return 操作结果
+     */
     @DeleteMapping("/recycle/permanent")
     @Operation(summary = "永久删除回收站文件")
     public ApiResponse<Void> permanentlyDelete(@Valid @RequestBody PermanentlyDeleteRecycleCommand command) {
+        command.setUserId(AnonymousUserContext.userId());
         fileRecycleUseCase.permanentlyDelete(command);
         return ApiResponse.ok();
     }
 
+    /**
+     * 清空回收站
+     *
+     * @param command 清空回收站命令
+     * @return 操作结果
+     */
     @DeleteMapping("/recycle/clear")
     @Operation(summary = "清空回收站")
     public ApiResponse<Void> clearRecycle(@Valid @RequestBody ClearRecycleCommand command) {
+        command.setUserId(AnonymousUserContext.userId());
         fileRecycleUseCase.clearRecycle(command);
         return ApiResponse.ok();
     }
 
+    /**
+     * 收藏文件
+     *
+     * @param command 收藏命令
+     * @return 操作结果
+     */
     @PostMapping("/favorites")
     @Operation(summary = "收藏文件")
     public ApiResponse<Void> favorite(@Valid @RequestBody FavoriteFilesCommand command) {
+        command.setUserId(AnonymousUserContext.userId());
         fileFavoriteUseCase.favorite(command);
         return ApiResponse.ok();
     }
 
+    /**
+     * 取消收藏文件
+     *
+     * @param command 取消收藏命令
+     * @return 操作结果
+     */
     @DeleteMapping("/favorites")
     @Operation(summary = "取消收藏文件")
     public ApiResponse<Void> unfavorite(@Valid @RequestBody FavoriteFilesCommand command) {
+        command.setUserId(AnonymousUserContext.userId());
         fileFavoriteUseCase.unfavorite(command);
         return ApiResponse.ok();
     }
 
+    /**
+     * 获取收藏数量
+     * @return 收藏数量
+     */
     @GetMapping("/favorites/count")
     @Operation(summary = "获取收藏数量")
-    public ApiResponse<Long> favoritesCount(@RequestParam String userId) {
-        return ApiResponse.ok(fileFavoriteUseCase.count(userId));
+    public ApiResponse<Long> favoritesCount() {
+        return ApiResponse.ok(fileFavoriteUseCase.count(AnonymousUserContext.userId()));
     }
 }

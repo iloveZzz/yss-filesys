@@ -12,35 +12,72 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 文件预览控制器
+ * <p>
+ * 提供文件预览令牌签发和预览信息获取接口
+ * </p>
+ */
 @RestController
 @RequestMapping("/api/preview")
 @Tag(name = "文件预览")
 public class FilePreviewController {
 
+    /**
+     * 文件预览用例
+     */
     private final FilePreviewUseCase filePreviewUseCase;
 
     public FilePreviewController(FilePreviewUseCase filePreviewUseCase) {
         this.filePreviewUseCase = filePreviewUseCase;
     }
 
+    /**
+     * 获取预览令牌
+     *
+     * @param fileId 文件ID
+     * @return 预览令牌
+     */
     @PostMapping("/token/{fileId}")
     @Operation(summary = "获取预览 token")
     public ApiResponse<String> issueToken(@PathVariable String fileId) {
         return ApiResponse.ok(filePreviewUseCase.issueToken(fileId));
     }
 
+    /**
+     * 获取预览信息
+     *
+     * @param fileId       文件ID
+     * @param previewToken 预览令牌
+     * @return 预览信息
+     */
     @GetMapping("/{fileId}")
     @Operation(summary = "获取预览信息")
     public ApiResponse<FilePreviewDTO> preview(@PathVariable String fileId, @RequestParam String previewToken) {
         return ApiResponse.ok(filePreviewUseCase.preview(fileId, previewToken));
     }
 
+    /**
+     * 获取压缩包内文件预览令牌
+     *
+     * @param archiveFileId 压缩包文件ID
+     * @param innerPath     压缩包内文件路径
+     * @return 预览令牌
+     */
     @PostMapping("/archive/token/{archiveFileId}")
     @Operation(summary = "获取压缩包内文件预览 token")
     public ApiResponse<String> issueArchiveToken(@PathVariable String archiveFileId, @RequestParam String innerPath) {
         return ApiResponse.ok(filePreviewUseCase.issueArchiveToken(archiveFileId, innerPath));
     }
 
+    /**
+     * 获取压缩包内文件预览信息
+     *
+     * @param archiveFileId 压缩包文件ID
+     * @param innerPath     压缩包内文件路径
+     * @param previewToken  预览令牌
+     * @return 预览信息
+     */
     @GetMapping("/archive/{archiveFileId}")
     @Operation(summary = "获取压缩包内文件预览信息")
     public ApiResponse<FilePreviewDTO> previewArchive(@PathVariable String archiveFileId,

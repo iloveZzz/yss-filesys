@@ -11,6 +11,7 @@ import com.yss.filesys.application.dto.InitDownloadResultDTO;
 import com.yss.filesys.application.port.FileTransferCommandUseCase;
 import com.yss.filesys.application.port.FileTransferQueryUseCase;
 import com.yss.filesys.application.query.DownloadChunkQuery;
+import com.yss.filesys.common.AnonymousUserContext;
 import com.yss.filesys.domain.gateway.FileRecordGateway;
 import com.yss.filesys.domain.gateway.FileTransferTaskGateway;
 import com.yss.filesys.domain.model.BizException;
@@ -49,6 +50,7 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
     @Override
     @Transactional(rollbackFor = Exception.class)
     public FileTransferTaskDTO initUpload(InitTransferUploadCommand command) {
+        command.setUserId(resolveUserId(command.getUserId()));
         String taskId = UUID.randomUUID().toString().replace("-", "");
         LocalDateTime now = LocalDateTime.now();
         String objectKey = buildObjectKey(command.getUserId(), taskId, command.getFileName());
@@ -249,6 +251,7 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
     @Override
     @Transactional(rollbackFor = Exception.class)
     public InitDownloadResultDTO initDownload(InitDownloadCommand command) {
+        command.setUserId(resolveUserId(command.getUserId()));
         FileRecord fileRecord = fileRecordGateway.findById(command.getFileId())
                 .orElseThrow(() -> new BizException("文件不存在: " + command.getFileId()));
         if (!fileRecord.getUserId().equals(command.getUserId())) {
@@ -302,9 +305,7 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
 
     @Override
     public List<FileTransferTaskDTO> listByUserId(String userId) {
-        if (userId == null || userId.isBlank()) {
-            throw new BizException("userId 不能为空");
-        }
+        userId = resolveUserId(userId);
         return fileTransferTaskGateway.listByUserId(userId).stream().map(this::toDTO).toList();
     }
 
@@ -375,6 +376,10 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
 
     private String buildObjectKey(String userId, String taskId, String fileName) {
         return userId + "/" + taskId + "_" + fileName.replaceAll("[\\\\/:*?\"<>|]", "_");
+    }
+
+    private String resolveUserId(String userId) {
+        return userId == null || userId.isBlank() ? AnonymousUserContext.userId() : userId;
     }
 
     private String suffix(String fileName) {

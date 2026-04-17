@@ -6,6 +6,7 @@ import com.yss.filesys.application.dto.StoragePlatformDTO;
 import com.yss.filesys.application.dto.StorageSettingDTO;
 import com.yss.filesys.application.port.StorageCommandUseCase;
 import com.yss.filesys.application.port.StorageQueryUseCase;
+import com.yss.filesys.common.AnonymousUserContext;
 import com.yss.filesys.domain.gateway.StoragePlatformGateway;
 import com.yss.filesys.domain.gateway.StorageSettingGateway;
 import com.yss.filesys.domain.model.BizException;
@@ -40,7 +41,7 @@ public class StorageAppService implements StorageCommandUseCase, StorageQueryUse
                 .platformIdentifier(command.getPlatformIdentifier())
                 .configData(command.getConfigData())
                 .enabled(command.getEnabled() == null ? 0 : command.getEnabled())
-                .userId(command.getUserId())
+                .userId(resolveUserId(command.getUserId()))
                 .createdAt(current == null ? now : current.getCreatedAt())
                 .updatedAt(now)
                 .remark(command.getRemark())
@@ -63,10 +64,12 @@ public class StorageAppService implements StorageCommandUseCase, StorageQueryUse
 
     @Override
     public java.util.List<StorageSettingDTO> listSettingsByUser(String userId) {
-        if (userId == null || userId.isBlank()) {
-            throw new BizException("userId 不能为空");
-        }
+        userId = resolveUserId(userId);
         return storageSettingGateway.listByUserId(userId).stream().map(this::toDTO).toList();
+    }
+
+    private String resolveUserId(String userId) {
+        return userId == null || userId.isBlank() ? AnonymousUserContext.userId() : userId;
     }
 
     private StoragePlatformDTO toDTO(StoragePlatform platform) {
