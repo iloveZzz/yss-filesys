@@ -195,6 +195,7 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
     @Override
     public FileRecordDTO getById(String fileId) {
         FileRecord record = fileRecordGateway.findById(fileId).orElseThrow(() -> new BizException("文件不存在: " + fileId));
+        touchFiles(List.of(fileId), LocalDateTime.now());
         return toDTO(record, false);
     }
 
@@ -242,6 +243,7 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
         if (expireSeconds != null && expireSeconds > 0) {
             url.append("&expireSeconds=").append(expireSeconds);
         }
+        touchFiles(List.of(fileId), LocalDateTime.now());
         return url.toString();
     }
 
@@ -257,6 +259,7 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
             throw new BizException("文件不存在");
         }
         try {
+            touchFiles(List.of(fileId), LocalDateTime.now());
             return FileDownloadDTO.builder()
                     .fileName(record.getDisplayName())
                     .fileSize(record.getSize())

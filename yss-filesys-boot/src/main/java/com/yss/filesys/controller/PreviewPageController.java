@@ -75,6 +75,24 @@ public class PreviewPageController {
     }
 
     /**
+     * 预览错误页
+     */
+    @GetMapping("/preview/error")
+    public String previewError(Model model) {
+        model.addAttribute("errorMessage", "预览失败");
+        return "preview/error";
+    }
+
+    /**
+     * 压缩包预览错误页
+     */
+    @GetMapping("/archive/preview/error")
+    public String archivePreviewError(Model model) {
+        model.addAttribute("errorMessage", "压缩包内文件预览失败");
+        return "preview/error";
+    }
+
+    /**
      * 填充模型数据
      *
      * @param model 模型

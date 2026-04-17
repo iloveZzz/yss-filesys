@@ -42,6 +42,20 @@ public class FileHomeAppService implements FileHomeUseCase {
         List<FileHomeUsedBytesDTO> usedBytes = buildUsedBytes(records, unit, dateType);
         List<com.yss.filesys.application.dto.FileRecordDTO> recentFiles = records.stream()
                 .filter(record -> !Boolean.TRUE.equals(record.getIsDir()))
+                .sorted((a, b) -> {
+                    LocalDateTime at = a.getLastAccessTime();
+                    LocalDateTime bt = b.getLastAccessTime();
+                    if (at == null && bt == null) {
+                        return 0;
+                    }
+                    if (at == null) {
+                        return 1;
+                    }
+                    if (bt == null) {
+                        return -1;
+                    }
+                    return bt.compareTo(at);
+                })
                 .limit(20)
                 .map(record -> com.yss.filesys.application.dto.FileRecordDTO.builder()
                         .fileId(record.getFileId())

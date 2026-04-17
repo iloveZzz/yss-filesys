@@ -172,7 +172,8 @@ public class FileRecordGatewayImpl implements FileRecordGateway {
                     .eq(query.getDeleted() != null, FileRecordPO::getIsDeleted, query.getDeleted());
         } else {
             wrapper.eq(FileRecordPO::getIsDeleted, false)
-                    .eq(FileRecordPO::getIsDir, false);
+                    .eq(FileRecordPO::getIsDir, false)
+                    .isNotNull(FileRecordPO::getLastAccessTime);
         }
         if (query.getIsDir() != null) {
             wrapper.eq(FileRecordPO::getIsDir, query.getIsDir());
@@ -182,6 +183,9 @@ public class FileRecordGatewayImpl implements FileRecordGateway {
                         .or()
                         .like(FileRecordPO::getDisplayName, query.getKeyword()));
         applyFileTypeFilter(wrapper, query);
+        if (Boolean.TRUE.equals(query.getIsRecents())) {
+            wrapper.orderByDesc(FileRecordPO::getLastAccessTime);
+        }
         return wrapper.orderByDesc(FileRecordPO::getUpdateTime)
                 .orderByDesc(FileRecordPO::getUploadTime);
     }
