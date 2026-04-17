@@ -66,7 +66,7 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
                 .isDir(true)
                 .parentId(command.getParentId())
                 .userId(resolveUserId(command.getUserId()))
-                .storageSettingId(command.getStorageSettingId())
+                .storageSettingId(resolveStorageSettingId(command.getStorageSettingId()))
                 .uploadTime(now)
                 .updateTime(now)
                 .isDeleted(false)
@@ -440,5 +440,11 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
 
     private String resolveUserId(String userId) {
         return userId == null || userId.isBlank() ? AnonymousUserContext.userId() : userId;
+    }
+
+    private String resolveStorageSettingId(String storageSettingId) {
+        return storageSettingId == null || storageSettingId.isBlank()
+                ? com.yss.filesys.storage.plugin.core.config.StorageUtils.LOCAL_PLATFORM_IDENTIFIER
+                : storageSettingId;
     }
 }

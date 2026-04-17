@@ -19,6 +19,5 @@ public class InitTransferUploadCommand {
     private Long chunkSize;
     @NotBlank
     private String mimeType;
-    @NotBlank
     private String storageSettingId;
 }

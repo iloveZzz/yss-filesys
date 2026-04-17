@@ -10,6 +10,5 @@ public class CreateDirectoryCommand {
     private String parentId;
     @NotBlank
     private String folderName;
-    @NotBlank
     private String storageSettingId;
 }

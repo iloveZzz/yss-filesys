@@ -21,6 +21,7 @@ import com.yss.filesys.domain.model.TransferTaskStatus;
 import com.yss.filesys.domain.model.TransferTaskType;
 import com.yss.filesys.storage.plugin.boot.StorageServiceFacade;
 import com.yss.filesys.storage.plugin.core.IStorageOperationService;
+import com.yss.filesys.storage.plugin.core.config.StorageUtils;
 import com.yss.filesys.service.TransferSseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -55,13 +56,14 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
         command.setUserId(resolveUserId(command.getUserId()));
         String taskId = UUID.randomUUID().toString().replace("-", "");
         LocalDateTime now = LocalDateTime.now();
+        String storageSettingId = resolveStorageSettingId(command.getStorageSettingId());
         String objectKey = buildObjectKey(command.getUserId(), taskId, command.getFileName());
         FileTransferTask task = FileTransferTask.builder()
                 .taskId(taskId)
                 .uploadId(taskId)
                 .parentId(command.getParentId())
                 .userId(command.getUserId())
-                .storageSettingId(command.getStorageSettingId())
+                .storageSettingId(storageSettingId)
                 .objectKey(objectKey)
                 .fileName(command.getFileName())
                 .fileSize(command.getFileSize())
@@ -449,6 +451,12 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
 
     private String resolveUserId(String userId) {
         return userId == null || userId.isBlank() ? AnonymousUserContext.userId() : userId;
+    }
+
+    private String resolveStorageSettingId(String storageSettingId) {
+        return storageSettingId == null || storageSettingId.isBlank()
+                ? StorageUtils.LOCAL_PLATFORM_IDENTIFIER
+                : storageSettingId;
     }
 
     private String suffix(String fileName) {

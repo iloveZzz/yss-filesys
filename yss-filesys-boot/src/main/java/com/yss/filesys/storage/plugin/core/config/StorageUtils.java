@@ -10,7 +10,7 @@ public final class StorageUtils {
     }
 
     public static boolean isLocalConfig(String configId) {
-        return configId == null || LOCAL_PLATFORM_IDENTIFIER.equals(configId);
+        return configId == null || configId.isBlank() || LOCAL_PLATFORM_IDENTIFIER.equals(configId);
     }
 
     public static String normalizeConfigId(String configId) {
