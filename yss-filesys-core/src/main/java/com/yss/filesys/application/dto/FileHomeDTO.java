@@ -35,7 +35,19 @@ public class FileHomeDTO {
      */
     long totalBytes;
     /**
+     * 首页趋势参数
+     */
+    Integer unit;
+    /**
+     * 趋势日期类型
+     */
+    Integer dateType;
+    /**
      * 各存储已用字节数列表
      */
     List<FileHomeUsedBytesDTO> usedBytes;
+    /**
+     * 最近文件列表
+     */
+    List<FileRecordDTO> recentFiles;
 }

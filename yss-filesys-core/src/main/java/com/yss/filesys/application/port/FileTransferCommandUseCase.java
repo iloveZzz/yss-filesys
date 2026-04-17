@@ -22,5 +22,11 @@ public interface FileTransferCommandUseCase {
 
     InitDownloadResultDTO initDownload(InitDownloadCommand command);
 
+    void pause(String taskId);
+
+    void resume(String taskId);
+
     void cancel(String taskId);
+
+    void clearFinished(String userId);
 }

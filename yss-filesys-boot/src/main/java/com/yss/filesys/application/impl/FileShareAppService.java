@@ -6,6 +6,7 @@ import com.yss.filesys.application.dto.FileDownloadDTO;
 import com.yss.filesys.application.dto.FileShareDTO;
 import com.yss.filesys.application.dto.FileShareAccessRecordDTO;
 import com.yss.filesys.application.dto.FileRecordDTO;
+import com.yss.filesys.application.dto.PageDTO;
 import com.yss.filesys.application.dto.FileShareThinDTO;
 import com.yss.filesys.application.port.FileShareCommandUseCase;
 import com.yss.filesys.application.port.FileShareAccessUseCase;
@@ -76,9 +77,36 @@ public class FileShareAppService implements FileShareCommandUseCase, FileShareQu
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void clearAll(String userId) {
+        userId = resolveUserId(userId);
+        List<String> shareIds = fileShareGateway.listByUserId(userId).stream().map(FileShareRecord::getShareId).toList();
+        if (shareIds.isEmpty()) {
+            return;
+        }
+        cancelByIds(shareIds);
+    }
+
+    @Override
     public List<FileShareDTO> listByUserId(String userId) {
         userId = resolveUserId(userId);
         return fileShareGateway.listByUserId(userId).stream().map(this::toDTO).toList();
+    }
+
+    @Override
+    public PageDTO<FileShareDTO> pageByUserId(String userId, long pageNo, long pageSize) {
+        userId = resolveUserId(userId);
+        List<FileShareDTO> all = fileShareGateway.listByUserId(userId).stream().map(this::toDTO).toList();
+        long total = all.size();
+        int from = (int) Math.max(0, (pageNo - 1) * pageSize);
+        int to = (int) Math.min(total, from + pageSize);
+        List<FileShareDTO> records = from >= to ? List.of() : all.subList(from, to);
+        return PageDTO.<FileShareDTO>builder()
+                .total(total)
+                .pageNo(pageNo)
+                .pageSize(pageSize)
+                .records(records)
+                .build();
     }
 
     @Override

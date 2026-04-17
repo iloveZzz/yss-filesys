@@ -9,4 +9,6 @@ public interface StorageCommandUseCase {
     StorageSettingDTO upsert(UpsertStorageSettingCommand command);
 
     void updateStatus(UpdateStorageSettingStatusCommand command);
+
+    void delete(String id);
 }

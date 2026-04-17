@@ -164,16 +164,57 @@ public class FileRecordGatewayImpl implements FileRecordGateway {
     }
 
     private LambdaQueryWrapper<FileRecordPO> buildQueryWrapper(FileSearchQuery query) {
-        return new LambdaQueryWrapper<FileRecordPO>()
+        LambdaQueryWrapper<FileRecordPO> wrapper = new LambdaQueryWrapper<FileRecordPO>()
                 .eq(FileRecordPO::getUserId, query.getUserId())
-                .eq(query.getParentId() != null, FileRecordPO::getParentId, query.getParentId())
-                .eq(query.getDeleted() != null, FileRecordPO::getIsDeleted, query.getDeleted())
-                .in(query.getFileIds() != null && !query.getFileIds().isEmpty(), FileRecordPO::getId, query.getFileIds())
-                .and(query.getKeyword() != null && !query.getKeyword().isBlank(),
-                        wrapper -> wrapper.like(FileRecordPO::getOriginalName, query.getKeyword())
-                                .or()
-                                .like(FileRecordPO::getDisplayName, query.getKeyword()))
-                .orderByDesc(FileRecordPO::getUpdateTime)
+                .in(query.getFileIds() != null && !query.getFileIds().isEmpty(), FileRecordPO::getId, query.getFileIds());
+        if (!Boolean.TRUE.equals(query.getIsRecents())) {
+            wrapper.eq(query.getParentId() != null, FileRecordPO::getParentId, query.getParentId())
+                    .eq(query.getDeleted() != null, FileRecordPO::getIsDeleted, query.getDeleted());
+        } else {
+            wrapper.eq(FileRecordPO::getIsDeleted, false)
+                    .eq(FileRecordPO::getIsDir, false);
+        }
+        if (query.getIsDir() != null) {
+            wrapper.eq(FileRecordPO::getIsDir, query.getIsDir());
+        }
+        wrapper.and(query.getKeyword() != null && !query.getKeyword().isBlank(),
+                inner -> inner.like(FileRecordPO::getOriginalName, query.getKeyword())
+                        .or()
+                        .like(FileRecordPO::getDisplayName, query.getKeyword()));
+        applyFileTypeFilter(wrapper, query);
+        return wrapper.orderByDesc(FileRecordPO::getUpdateTime)
                 .orderByDesc(FileRecordPO::getUploadTime);
+    }
+
+    private void applyFileTypeFilter(LambdaQueryWrapper<FileRecordPO> wrapper, FileSearchQuery query) {
+        if (query.getFileType() == null || query.getFileType().isBlank()) {
+            return;
+        }
+        String fileType = query.getFileType().trim().toLowerCase();
+        if ("other".equals(fileType)) {
+            wrapper.eq(FileRecordPO::getIsDir, false)
+                    .and(inner -> inner.notIn(FileRecordPO::getSuffix, List.of(
+                                    "png", "jpg", "jpeg", "gif", "webp", "bmp", "svg",
+                                    "mp4", "avi", "mov", "mkv", "wmv", "flv", "webm",
+                                    "mp3", "wav", "aac", "flac", "ogg", "m4a",
+                                    "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+                                    "txt", "md", "csv"))
+                            .or()
+                            .isNull(FileRecordPO::getSuffix)
+                            .or()
+                            .eq(FileRecordPO::getSuffix, ""));
+        } else if ("image".equals(fileType)) {
+            wrapper.eq(FileRecordPO::getIsDir, false)
+                    .in(FileRecordPO::getSuffix, List.of("png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"));
+        } else if ("video".equals(fileType)) {
+            wrapper.eq(FileRecordPO::getIsDir, false)
+                    .in(FileRecordPO::getSuffix, List.of("mp4", "avi", "mov", "mkv", "wmv", "flv", "webm"));
+        } else if ("audio".equals(fileType)) {
+            wrapper.eq(FileRecordPO::getIsDir, false)
+                    .in(FileRecordPO::getSuffix, List.of("mp3", "wav", "aac", "flac", "ogg", "m4a"));
+        } else if ("document".equals(fileType)) {
+            wrapper.eq(FileRecordPO::getIsDir, false)
+                    .in(FileRecordPO::getSuffix, List.of("pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "md", "csv"));
+        }
     }
 }

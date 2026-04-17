@@ -37,6 +37,12 @@ public class StoragePlatformGatewayImpl implements StoragePlatformGateway {
     }
 
     @Override
+    public Optional<StoragePlatform> findById(Long id) {
+        StoragePlatformPO po = storagePlatformMapper.selectById(id);
+        return po == null ? Optional.empty() : Optional.of(StoragePlatformConvertor.toDomain(po));
+    }
+
+    @Override
     public StoragePlatform save(StoragePlatform platform) {
         StoragePlatformPO po = StoragePlatformConvertor.toPO(platform);
         if (po.getId() == null || storagePlatformMapper.selectById(po.getId()) == null) {
@@ -45,5 +51,10 @@ public class StoragePlatformGatewayImpl implements StoragePlatformGateway {
             storagePlatformMapper.updateById(po);
         }
         return StoragePlatformConvertor.toDomain(po);
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        storagePlatformMapper.deleteById(id);
     }
 }

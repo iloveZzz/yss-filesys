@@ -58,4 +58,21 @@ public class StorageSettingGatewayImpl implements StorageSettingGateway {
                         .set(StorageSettingPO::getUpdatedAt, LocalDateTime.now())
         );
     }
+
+    @Override
+    public void deleteById(String id) {
+        storageSettingMapper.deleteById(id);
+    }
+
+    @Override
+    public List<StorageSetting> listEnabledByUserId(String userId) {
+        return storageSettingMapper.selectList(
+                        new LambdaQueryWrapper<StorageSettingPO>()
+                                .eq(StorageSettingPO::getUserId, userId)
+                                .eq(StorageSettingPO::getEnabled, 1)
+                                .orderByDesc(StorageSettingPO::getUpdatedAt))
+                .stream()
+                .map(StorageSettingConvertor::toDomain)
+                .toList();
+    }
 }

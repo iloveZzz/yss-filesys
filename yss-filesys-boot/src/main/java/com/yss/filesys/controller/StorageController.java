@@ -2,17 +2,20 @@ package com.yss.filesys.controller;
 
 import com.yss.filesys.application.command.UpdateStorageSettingStatusCommand;
 import com.yss.filesys.application.command.UpsertStorageSettingCommand;
+import com.yss.filesys.application.dto.StorageActivePlatformDTO;
 import com.yss.filesys.application.dto.StoragePlatformDTO;
 import com.yss.filesys.application.dto.StorageSettingDTO;
 import com.yss.filesys.application.port.StorageCommandUseCase;
 import com.yss.filesys.application.port.StorageQueryUseCase;
 import com.yss.filesys.common.ApiResponse;
 import com.yss.filesys.common.AnonymousUserContext;
+import com.yss.filesys.domain.model.BizException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -58,6 +61,16 @@ public class StorageController {
     }
 
     /**
+     * 根据标识符查询存储平台
+     */
+    @GetMapping("/platform/{identifier}")
+    @Operation(summary = "根据标识符查询存储平台")
+    public ApiResponse<StoragePlatformDTO> getPlatformByIdentifier(@PathVariable String identifier) {
+        return ApiResponse.ok(storageQueryUseCase.getPlatformByIdentifier(identifier)
+                .orElseThrow(() -> new BizException("存储平台不存在: " + identifier)));
+    }
+
+    /**
      * 按用户查询存储配置列表
      * @return 存储配置列表
      */
@@ -65,6 +78,15 @@ public class StorageController {
     @Operation(summary = "按用户查询存储配置")
     public ApiResponse<List<StorageSettingDTO>> listSettings() {
         return ApiResponse.ok(storageQueryUseCase.listSettingsByUser(AnonymousUserContext.userId()));
+    }
+
+    /**
+     * 获取已启用存储配置列表
+     */
+    @GetMapping("/active-platforms")
+    @Operation(summary = "获取已启用存储配置列表")
+    public ApiResponse<List<StorageActivePlatformDTO>> listActivePlatforms() {
+        return ApiResponse.ok(storageQueryUseCase.listActivePlatforms(AnonymousUserContext.userId()));
     }
 
     /**
@@ -94,6 +116,16 @@ public class StorageController {
         command.setId(id);
         command.setEnabled(enabled);
         storageCommandUseCase.updateStatus(command);
+        return ApiResponse.ok();
+    }
+
+    /**
+     * 删除存储配置
+     */
+    @DeleteMapping("/settings/{id}")
+    @Operation(summary = "删除存储配置")
+    public ApiResponse<Void> deleteSetting(@PathVariable String id) {
+        storageCommandUseCase.delete(id);
         return ApiResponse.ok();
     }
 }

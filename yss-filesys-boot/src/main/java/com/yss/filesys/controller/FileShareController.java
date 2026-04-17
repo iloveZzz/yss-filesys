@@ -7,6 +7,7 @@ import com.yss.filesys.application.dto.FileDownloadDTO;
 import com.yss.filesys.application.dto.FileShareDTO;
 import com.yss.filesys.application.dto.FileShareAccessRecordDTO;
 import com.yss.filesys.application.dto.FileRecordDTO;
+import com.yss.filesys.application.dto.PageDTO;
 import com.yss.filesys.application.dto.FileShareThinDTO;
 import com.yss.filesys.application.port.FileShareCommandUseCase;
 import com.yss.filesys.application.port.FileShareAccessUseCase;
@@ -85,6 +86,16 @@ public class FileShareController {
     @Operation(summary = "按用户查询分享")
     public ApiResponse<List<FileShareDTO>> listByUser() {
         return ApiResponse.ok(fileShareQueryUseCase.listByUserId(AnonymousUserContext.userId()));
+    }
+
+    /**
+     * 分页查询分享
+     */
+    @GetMapping("/pages")
+    @Operation(summary = "分页查询分享")
+    public ApiResponse<PageDTO<FileShareDTO>> pageByUser(@RequestParam(defaultValue = "1") long pageNo,
+                                                         @RequestParam(defaultValue = "20") long pageSize) {
+        return ApiResponse.ok(fileShareQueryUseCase.pageByUserId(AnonymousUserContext.userId(), pageNo, pageSize));
     }
 
     /**
@@ -171,6 +182,16 @@ public class FileShareController {
     @Operation(summary = "批量取消分享")
     public ApiResponse<Void> cancel(@RequestBody List<String> shareIds) {
         fileShareCommandUseCase.cancelByIds(shareIds);
+        return ApiResponse.ok();
+    }
+
+    /**
+     * 清空当前用户所有分享
+     */
+    @DeleteMapping("/clears")
+    @Operation(summary = "清空当前用户所有分享")
+    public ApiResponse<Void> clearAll() {
+        fileShareCommandUseCase.clearAll(AnonymousUserContext.userId());
         return ApiResponse.ok();
     }
 

@@ -90,6 +90,9 @@ public class FileController {
     @Operation(summary = "分页查询文件")
     public ApiResponse<PageDTO<FileRecordDTO>> search(@RequestParam(required = false) String parentId,
                                                       @RequestParam(required = false) String keyword,
+                                                      @RequestParam(required = false) String fileType,
+                                                      @RequestParam(required = false) Boolean isDir,
+                                                      @RequestParam(required = false) Boolean isRecents,
                                                       @RequestParam(required = false) Boolean deleted,
                                                       @RequestParam(required = false) Boolean favorite,
                                                       @RequestParam(defaultValue = "1") long pageNo,
@@ -98,6 +101,9 @@ public class FileController {
         query.setUserId(AnonymousUserContext.userId());
         query.setParentId(parentId);
         query.setKeyword(keyword);
+        query.setFileType(fileType);
+        query.setIsDir(isDir);
+        query.setIsRecents(isRecents);
         query.setDeleted(deleted);
         query.setFavorite(favorite);
         query.setPageNo(pageNo);

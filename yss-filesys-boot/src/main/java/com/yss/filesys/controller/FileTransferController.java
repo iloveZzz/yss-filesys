@@ -34,6 +34,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * 文件传输控制器
@@ -168,6 +169,26 @@ public class FileTransferController {
     }
 
     /**
+     * 暂停传输任务
+     */
+    @PostMapping("/pause/{taskId}")
+    @Operation(summary = "暂停传输任务")
+    public ApiResponse<Void> pause(@PathVariable String taskId) {
+        fileTransferCommandUseCase.pause(taskId);
+        return ApiResponse.ok();
+    }
+
+    /**
+     * 恢复传输任务
+     */
+    @PostMapping("/resume/{taskId}")
+    @Operation(summary = "恢复传输任务")
+    public ApiResponse<Void> resume(@PathVariable String taskId) {
+        fileTransferCommandUseCase.resume(taskId);
+        return ApiResponse.ok();
+    }
+
+    /**
      * 取消传输任务
      *
      * @param taskId 任务ID
@@ -184,10 +205,10 @@ public class FileTransferController {
      * 按用户查询传输任务列表
      * @return 传输任务列表
      */
-    @GetMapping
+    @GetMapping({"", "/files"})
     @Operation(summary = "按用户查询传输任务")
-    public ApiResponse<List<FileTransferTaskDTO>> listByUser() {
-        return ApiResponse.ok(fileTransferQueryUseCase.listByUserId(AnonymousUserContext.userId()));
+    public ApiResponse<List<FileTransferTaskDTO>> listByUser(@RequestParam(required = false) Integer statusType) {
+        return ApiResponse.ok(fileTransferQueryUseCase.listByUserId(AnonymousUserContext.userId(), statusType));
     }
 
     /**
@@ -200,5 +221,33 @@ public class FileTransferController {
     @Operation(summary = "查询传输任务详情")
     public ApiResponse<FileTransferTaskDTO> getByTaskId(@PathVariable String taskId) {
         return ApiResponse.ok(fileTransferQueryUseCase.getByTaskId(taskId));
+    }
+
+    /**
+     * 查询已上传分片
+     */
+    @GetMapping("/chunks/{taskId}")
+    @Operation(summary = "查询已上传分片")
+    public ApiResponse<List<Integer>> getUploadedChunks(@PathVariable String taskId) {
+        return ApiResponse.ok(fileTransferQueryUseCase.getUploadedChunks(taskId));
+    }
+
+    /**
+     * 查询已下载分片
+     */
+    @GetMapping("/download/chunks/{taskId}")
+    @Operation(summary = "查询已下载分片")
+    public ApiResponse<List<Integer>> getDownloadedChunks(@PathVariable String taskId) {
+        return ApiResponse.ok(fileTransferQueryUseCase.getDownloadedChunks(taskId));
+    }
+
+    /**
+     * 清理已完成传输任务
+     */
+    @DeleteMapping("/clears")
+    @Operation(summary = "清理已完成传输任务")
+    public ApiResponse<Void> clearTransfers() {
+        fileTransferCommandUseCase.clearFinished(AnonymousUserContext.userId());
+        return ApiResponse.ok();
     }
 }

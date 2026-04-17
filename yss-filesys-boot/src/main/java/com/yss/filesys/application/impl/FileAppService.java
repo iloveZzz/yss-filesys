@@ -162,6 +162,11 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
     @Override
     public PageDTO<FileRecordDTO> search(FileSearchQuery query) {
         query.setUserId(resolveUserId(query.getUserId()));
+        if (Boolean.TRUE.equals(query.getIsRecents())) {
+            query.setDeleted(false);
+            query.setIsDir(false);
+            query.setParentId(null);
+        }
         if (Boolean.TRUE.equals(query.getFavorite())) {
             List<String> favoriteIds = fileUserFavoriteGateway.listFileIdsByUserId(query.getUserId());
             if (favoriteIds.isEmpty()) {

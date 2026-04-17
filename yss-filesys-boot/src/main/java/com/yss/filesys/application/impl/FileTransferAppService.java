@@ -32,7 +32,9 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -304,9 +306,35 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
     }
 
     @Override
-    public List<FileTransferTaskDTO> listByUserId(String userId) {
+    public void pause(String taskId) {
+        FileTransferTask task = fileTransferTaskGateway.findByTaskId(taskId).orElseThrow(() -> new BizException("传输任务不存在: " + taskId));
+        if (task.getStatus() == TransferTaskStatus.completed || task.getStatus() == TransferTaskStatus.canceled) {
+            throw new BizException("任务已结束，无法暂停");
+        }
+        fileTransferTaskGateway.updateStatus(taskId, TransferTaskStatus.paused, null);
+        transferSseService.sendStatus(task.getUserId(), taskId, TransferTaskStatus.paused.name(), "任务已暂停");
+    }
+
+    @Override
+    public void resume(String taskId) {
+        FileTransferTask task = fileTransferTaskGateway.findByTaskId(taskId).orElseThrow(() -> new BizException("传输任务不存在: " + taskId));
+        if (task.getStatus() != TransferTaskStatus.paused) {
+            throw new BizException("任务未处于暂停状态");
+        }
+        TransferTaskStatus status = task.getTaskType() == TransferTaskType.download
+                ? TransferTaskStatus.downloading
+                : TransferTaskStatus.uploading;
+        fileTransferTaskGateway.updateStatus(taskId, status, null);
+        transferSseService.sendStatus(task.getUserId(), taskId, status.name(), "任务已恢复");
+    }
+
+    @Override
+    public List<FileTransferTaskDTO> listByUserId(String userId, Integer statusType) {
         userId = resolveUserId(userId);
-        return fileTransferTaskGateway.listByUserId(userId).stream().map(this::toDTO).toList();
+        return fileTransferTaskGateway.listByUserId(userId).stream()
+                .filter(task -> matchStatusType(task, statusType))
+                .map(this::toDTO)
+                .toList();
     }
 
     @Override
@@ -357,6 +385,47 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
         }
     }
 
+    @Override
+    public List<Integer> getUploadedChunks(String taskId) {
+        FileTransferTask task = fileTransferTaskGateway.findByTaskId(taskId)
+                .orElseThrow(() -> new BizException("传输任务不存在: " + taskId));
+        if (task.getTaskType() != TransferTaskType.upload) {
+            throw new BizException("任务不是上传任务");
+        }
+        return existingChunkIndexes(chunkDir(taskId));
+    }
+
+    @Override
+    public List<Integer> getDownloadedChunks(String taskId) {
+        FileTransferTask task = fileTransferTaskGateway.findByTaskId(taskId)
+                .orElseThrow(() -> new BizException("传输任务不存在: " + taskId));
+        if (task.getTaskType() != TransferTaskType.download) {
+            throw new BizException("任务不是下载任务");
+        }
+        int count = task.getUploadedChunks() == null ? 0 : task.getUploadedChunks();
+        List<Integer> chunks = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            chunks.add(i);
+        }
+        return chunks;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void clearFinished(String userId) {
+        userId = resolveUserId(userId);
+        List<FileTransferTask> tasks = fileTransferTaskGateway.listByUserId(userId).stream()
+                .filter(this::isFinished)
+                .toList();
+        if (tasks.isEmpty()) {
+            return;
+        }
+        fileTransferTaskGateway.deleteByTaskIds(tasks.stream().map(FileTransferTask::getTaskId).toList());
+        for (FileTransferTask task : tasks) {
+            deleteChunkDir(task.getTaskId());
+        }
+    }
+
     private FileTransferTaskDTO toDTO(FileTransferTask task) {
         return FileTransferTaskDTO.builder()
                 .taskId(task.getTaskId())
@@ -389,6 +458,55 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
 
     private Path chunkDir(String taskId) {
         return Path.of(storageRoot, "chunks", taskId);
+    }
+
+    private void deleteChunkDir(String taskId) {
+        Path dir = chunkDir(taskId);
+        if (!Files.exists(dir)) {
+            return;
+        }
+        try (var stream = Files.walk(dir)) {
+            stream.sorted((a, b) -> b.compareTo(a)).forEach(path -> {
+                try {
+                    Files.deleteIfExists(path);
+                } catch (IOException ignored) {
+                }
+            });
+        } catch (IOException ignored) {
+        }
+    }
+
+    private List<Integer> existingChunkIndexes(Path dir) {
+        if (!Files.exists(dir)) {
+            return List.of();
+        }
+        try (var stream = Files.list(dir)) {
+            return stream.filter(path -> path.getFileName().toString().endsWith(".part"))
+                    .map(path -> path.getFileName().toString().replace(".part", ""))
+                    .map(Integer::parseInt)
+                    .sorted()
+                    .toList();
+        } catch (IOException e) {
+            throw new BizException("读取分片列表失败: " + e.getMessage());
+        }
+    }
+
+    private boolean matchStatusType(FileTransferTask task, Integer statusType) {
+        if (statusType == null) {
+            return true;
+        }
+        return switch (statusType) {
+            case 1 -> task.getTaskType() == TransferTaskType.upload;
+            case 2 -> task.getTaskType() == TransferTaskType.download;
+            case 3 -> isFinished(task);
+            default -> true;
+        };
+    }
+
+    private boolean isFinished(FileTransferTask task) {
+        return task.getStatus() == TransferTaskStatus.completed
+                || task.getStatus() == TransferTaskStatus.failed
+                || task.getStatus() == TransferTaskStatus.canceled;
     }
 
     private int countUploadedChunks(Path chunkDir) throws IOException {

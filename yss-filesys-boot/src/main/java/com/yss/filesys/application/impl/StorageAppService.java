@@ -2,6 +2,7 @@ package com.yss.filesys.application.impl;
 
 import com.yss.filesys.application.command.UpdateStorageSettingStatusCommand;
 import com.yss.filesys.application.command.UpsertStorageSettingCommand;
+import com.yss.filesys.application.dto.StorageActivePlatformDTO;
 import com.yss.filesys.application.dto.StoragePlatformDTO;
 import com.yss.filesys.application.dto.StorageSettingDTO;
 import com.yss.filesys.application.port.StorageCommandUseCase;
@@ -18,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -58,14 +61,44 @@ public class StorageAppService implements StorageCommandUseCase, StorageQueryUse
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void delete(String id) {
+        storageSettingGateway.findById(id).orElseThrow(() -> new BizException("存储配置不存在: " + id));
+        storageSettingGateway.deleteById(id);
+    }
+
+    @Override
     public java.util.List<StoragePlatformDTO> listPlatforms() {
         return storagePlatformGateway.listAll().stream().map(this::toDTO).toList();
+    }
+
+    @Override
+    public Optional<StoragePlatformDTO> getPlatformByIdentifier(String identifier) {
+        return storagePlatformGateway.findByIdentifier(identifier).map(this::toDTO);
     }
 
     @Override
     public java.util.List<StorageSettingDTO> listSettingsByUser(String userId) {
         userId = resolveUserId(userId);
         return storageSettingGateway.listByUserId(userId).stream().map(this::toDTO).toList();
+    }
+
+    @Override
+    public java.util.List<StorageActivePlatformDTO> listActivePlatforms(String userId) {
+        userId = resolveUserId(userId);
+        return storageSettingGateway.listEnabledByUserId(userId).stream().map(setting -> {
+            StoragePlatform platform = storagePlatformGateway.findByIdentifier(setting.getPlatformIdentifier()).orElse(null);
+            return StorageActivePlatformDTO.builder()
+                    .settingId(setting.getId())
+                    .platformIdentifier(setting.getPlatformIdentifier())
+                    .platformName(platform == null ? null : platform.getName())
+                    .platformIcon(platform == null ? null : platform.getIcon())
+                    .remark(setting.getRemark())
+                    .createdAt(setting.getCreatedAt())
+                    .updatedAt(setting.getUpdatedAt())
+                    .isEnabled(setting.getEnabled() != null && setting.getEnabled() == 1)
+                    .build();
+        }).toList();
     }
 
     private String resolveUserId(String userId) {

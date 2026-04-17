@@ -14,4 +14,8 @@ public interface StorageSettingGateway {
     StorageSetting save(StorageSetting setting);
 
     void updateEnabled(String id, Integer enabled);
+
+    void deleteById(String id);
+
+    List<StorageSetting> listEnabledByUserId(String userId);
 }

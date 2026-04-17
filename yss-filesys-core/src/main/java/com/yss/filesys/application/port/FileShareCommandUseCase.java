@@ -10,4 +10,6 @@ public interface FileShareCommandUseCase {
     FileShareDTO create(CreateShareCommand command);
 
     void cancelByIds(List<String> shareIds);
+
+    void clearAll(String userId);
 }

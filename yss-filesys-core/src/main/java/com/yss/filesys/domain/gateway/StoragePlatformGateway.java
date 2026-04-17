@@ -11,5 +11,9 @@ public interface StoragePlatformGateway {
 
     Optional<StoragePlatform> findByIdentifier(String identifier);
 
+    Optional<StoragePlatform> findById(Long id);
+
     StoragePlatform save(StoragePlatform platform);
+
+    void deleteById(Long id);
 }

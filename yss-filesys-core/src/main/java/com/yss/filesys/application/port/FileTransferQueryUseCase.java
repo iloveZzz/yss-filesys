@@ -7,9 +7,13 @@ import java.util.List;
 
 public interface FileTransferQueryUseCase {
 
-    List<FileTransferTaskDTO> listByUserId(String userId);
+    List<FileTransferTaskDTO> listByUserId(String userId, Integer statusType);
 
     FileTransferTaskDTO getByTaskId(String taskId);
 
     byte[] downloadChunk(DownloadChunkQuery query);
+
+    List<Integer> getUploadedChunks(String taskId);
+
+    List<Integer> getDownloadedChunks(String taskId);
 }
