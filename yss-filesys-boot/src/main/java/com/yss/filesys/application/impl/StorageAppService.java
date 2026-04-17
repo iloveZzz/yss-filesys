@@ -80,13 +80,17 @@ public class StorageAppService implements StorageCommandUseCase, StorageQueryUse
     @Override
     public java.util.List<StorageSettingDTO> listSettingsByUser(String userId) {
         userId = resolveUserId(userId);
-        return storageSettingGateway.listByUserId(userId).stream().map(this::toDTO).toList();
+        List<StorageSettingDTO> settings = storageSettingGateway.listByUserId(userId).stream().map(this::toDTO).toList();
+        if (!settings.isEmpty()) {
+            return settings;
+        }
+        return List.of(buildLocalSettingDTO(userId));
     }
 
     @Override
     public java.util.List<StorageActivePlatformDTO> listActivePlatforms(String userId) {
         userId = resolveUserId(userId);
-        return storageSettingGateway.listEnabledByUserId(userId).stream().map(setting -> {
+        List<StorageActivePlatformDTO> active = storageSettingGateway.listEnabledByUserId(userId).stream().map(setting -> {
             StoragePlatform platform = storagePlatformGateway.findByIdentifier(setting.getPlatformIdentifier()).orElse(null);
             return StorageActivePlatformDTO.builder()
                     .settingId(setting.getId())
@@ -99,6 +103,10 @@ public class StorageAppService implements StorageCommandUseCase, StorageQueryUse
                     .isEnabled(setting.getEnabled() != null && setting.getEnabled() == 1)
                     .build();
         }).toList();
+        if (!active.isEmpty()) {
+            return active;
+        }
+        return List.of(buildLocalActivePlatformDTO());
     }
 
     private String resolveUserId(String userId) {
@@ -128,6 +136,36 @@ public class StorageAppService implements StorageCommandUseCase, StorageQueryUse
                 .remark(setting.getRemark())
                 .createdAt(setting.getCreatedAt())
                 .updatedAt(setting.getUpdatedAt())
+                .build();
+    }
+
+    private StorageSettingDTO buildLocalSettingDTO(String userId) {
+        LocalDateTime now = LocalDateTime.now();
+        return StorageSettingDTO.builder()
+                .id(com.yss.filesys.storage.plugin.core.config.StorageUtils.LOCAL_PLATFORM_IDENTIFIER)
+                .platformIdentifier(com.yss.filesys.storage.plugin.core.config.StorageUtils.LOCAL_PLATFORM_IDENTIFIER)
+                .configData("{\"storageRoot\":\"/tmp/yss-filesys/storage\"}")
+                .enabled(1)
+                .userId(userId)
+                .remark("default local storage")
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+    }
+
+    private StorageActivePlatformDTO buildLocalActivePlatformDTO() {
+        LocalDateTime now = LocalDateTime.now();
+        StoragePlatform platform = storagePlatformGateway.findByIdentifier(com.yss.filesys.storage.plugin.core.config.StorageUtils.LOCAL_PLATFORM_IDENTIFIER)
+                .orElse(null);
+        return StorageActivePlatformDTO.builder()
+                .settingId(com.yss.filesys.storage.plugin.core.config.StorageUtils.LOCAL_PLATFORM_IDENTIFIER)
+                .platformIdentifier(com.yss.filesys.storage.plugin.core.config.StorageUtils.LOCAL_PLATFORM_IDENTIFIER)
+                .platformName(platform == null ? "本地存储" : platform.getName())
+                .platformIcon(platform == null ? "folder" : platform.getIcon())
+                .remark("default local storage")
+                .createdAt(now)
+                .updatedAt(now)
+                .isEnabled(true)
                 .build();
     }
 }
