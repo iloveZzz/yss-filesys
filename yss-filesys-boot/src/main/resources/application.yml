@@ -1,6 +1,10 @@
 spring:
   application:
     name: yss-filesys
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
   datasource:
     url: jdbc:mysql://127.0.0.1:3308/free-fs?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
     username: root
@@ -38,3 +42,10 @@ yss:
     storage-root: /tmp/yss-filesys/storage
   preview:
     token-expire-seconds: 300
+
+logging:
+  level:
+    com.yss.datamiddle.approval: DEBUG
+    org.springframework.jdbc: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
