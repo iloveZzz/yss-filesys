@@ -1,0 +1,97 @@
+package com.yss.filesys.application.impl;
+
+import com.yss.filesys.application.command.UpdateStorageSettingStatusCommand;
+import com.yss.filesys.application.command.UpsertStorageSettingCommand;
+import com.yss.filesys.application.dto.StoragePlatformDTO;
+import com.yss.filesys.application.dto.StorageSettingDTO;
+import com.yss.filesys.application.port.StorageCommandUseCase;
+import com.yss.filesys.application.port.StorageQueryUseCase;
+import com.yss.filesys.domain.gateway.StoragePlatformGateway;
+import com.yss.filesys.domain.gateway.StorageSettingGateway;
+import com.yss.filesys.domain.model.BizException;
+import com.yss.filesys.domain.model.StoragePlatform;
+import com.yss.filesys.domain.model.StorageSetting;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+public class StorageAppService implements StorageCommandUseCase, StorageQueryUseCase {
+
+    private final StoragePlatformGateway storagePlatformGateway;
+    private final StorageSettingGateway storageSettingGateway;
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public StorageSettingDTO upsert(UpsertStorageSettingCommand command) {
+        storagePlatformGateway.findByIdentifier(command.getPlatformIdentifier())
+                .orElseThrow(() -> new BizException("未找到存储平台插件: " + command.getPlatformIdentifier()));
+        LocalDateTime now = LocalDateTime.now();
+        String id = command.getId() == null || command.getId().isBlank()
+                ? UUID.randomUUID().toString().replace("-", "")
+                : command.getId();
+        StorageSetting current = storageSettingGateway.findById(id).orElse(null);
+        StorageSetting setting = StorageSetting.builder()
+                .id(id)
+                .platformIdentifier(command.getPlatformIdentifier())
+                .configData(command.getConfigData())
+                .enabled(command.getEnabled() == null ? 0 : command.getEnabled())
+                .userId(command.getUserId())
+                .createdAt(current == null ? now : current.getCreatedAt())
+                .updatedAt(now)
+                .remark(command.getRemark())
+                .deleted(0)
+                .build();
+        return toDTO(storageSettingGateway.save(setting));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateStatus(UpdateStorageSettingStatusCommand command) {
+        storageSettingGateway.findById(command.getId()).orElseThrow(() -> new BizException("存储配置不存在: " + command.getId()));
+        storageSettingGateway.updateEnabled(command.getId(), command.getEnabled());
+    }
+
+    @Override
+    public java.util.List<StoragePlatformDTO> listPlatforms() {
+        return storagePlatformGateway.listAll().stream().map(this::toDTO).toList();
+    }
+
+    @Override
+    public java.util.List<StorageSettingDTO> listSettingsByUser(String userId) {
+        if (userId == null || userId.isBlank()) {
+            throw new BizException("userId 不能为空");
+        }
+        return storageSettingGateway.listByUserId(userId).stream().map(this::toDTO).toList();
+    }
+
+    private StoragePlatformDTO toDTO(StoragePlatform platform) {
+        return StoragePlatformDTO.builder()
+                .id(platform.getId())
+                .name(platform.getName())
+                .identifier(platform.getIdentifier())
+                .configSchema(platform.getConfigSchema())
+                .icon(platform.getIcon())
+                .link(platform.getLink())
+                .isDefault(platform.getIsDefault())
+                .description(platform.getDescription())
+                .build();
+    }
+
+    private StorageSettingDTO toDTO(StorageSetting setting) {
+        return StorageSettingDTO.builder()
+                .id(setting.getId())
+                .platformIdentifier(setting.getPlatformIdentifier())
+                .configData(setting.getConfigData())
+                .enabled(setting.getEnabled())
+                .userId(setting.getUserId())
+                .remark(setting.getRemark())
+                .createdAt(setting.getCreatedAt())
+                .updatedAt(setting.getUpdatedAt())
+                .build();
+    }
+}

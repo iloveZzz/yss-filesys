@@ -1,0 +1,5 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title th:text="${fileName}">Markdown预览</title>
+<style>body{margin:0;background:#0f1420;color:#dbe6ff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.header{padding:12px 16px;background:#161d2f;border-bottom:1px solid #2a344c}.article{padding:20px;max-width:920px;margin:0 auto;line-height:1.7;white-space:pre-wrap;word-break:break-word}</style></head>
+<body><div class="header" th:text="${fileName}">Markdown预览</div><article class="article" th:text="${textContent}"></article></body></html>

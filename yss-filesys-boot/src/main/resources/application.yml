@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: yss-filesys
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3308/free-fs?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 30644
+  liquibase:
+    enabled: true
+    change-log: classpath:/db/changelog/db.changelog-master.yaml
+  quartz:
+    job-store-type: memory
+    auto-startup: true
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+yss:
+  files:
+    storage-root: /tmp/yss-filesys/storage
+  preview:
+    token-expire-seconds: 300
+
+sa-token:
+  token-name: Authorization
+  timeout: 2592000
+  active-timeout: -1
+  is-concurrent: true
+  is-share: true
