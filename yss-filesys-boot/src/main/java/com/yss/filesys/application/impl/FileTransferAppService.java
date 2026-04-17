@@ -192,6 +192,13 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
     public FileRecord mergeChunks(MergeChunksCommand command) {
         FileTransferTask task = fileTransferTaskGateway.findByTaskId(command.getTaskId())
                 .orElseThrow(() -> new BizException("传输任务不存在: " + command.getTaskId()));
+        if (task.getStatus() == TransferTaskStatus.completed) {
+            if (task.getFileId() == null || task.getFileId().isBlank()) {
+                throw new BizException("任务已完成，但未找到文件记录");
+            }
+            return fileRecordGateway.findById(task.getFileId())
+                    .orElseThrow(() -> new BizException("文件记录不存在: " + task.getFileId()));
+        }
         if (task.getStatus() != TransferTaskStatus.uploading && task.getStatus() != TransferTaskStatus.merging) {
             throw new BizException("任务状态不支持合并: " + task.getStatus());
         }
