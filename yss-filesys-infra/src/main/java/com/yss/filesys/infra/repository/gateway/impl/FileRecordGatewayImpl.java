@@ -171,12 +171,15 @@ public class FileRecordGatewayImpl implements FileRecordGateway {
             boolean isTypeFilter = query.getFileType() != null && !query.getFileType().isBlank();
             boolean isFavoriteView = Boolean.TRUE.equals(query.getFavorite()) && query.getParentId() == null;
             boolean isDirFilter = Boolean.TRUE.equals(query.getIsDir()) && query.getParentId() == null;
-            if (!isTypeFilter && !isFavoriteView && !isDirFilter) {
+            boolean isRecycleView = Boolean.TRUE.equals(query.getDeleted());
+            if (!isTypeFilter && !isFavoriteView && !isDirFilter && !isRecycleView) {
                 if (query.getParentId() == null) {
                     wrapper.isNull(FileRecordPO::getParentId);
                 } else {
                     wrapper.eq(FileRecordPO::getParentId, query.getParentId());
                 }
+            } else if (!isTypeFilter && !isFavoriteView && !isDirFilter && query.getParentId() != null) {
+                wrapper.eq(FileRecordPO::getParentId, query.getParentId());
             }
             wrapper.eq(FileRecordPO::getIsDeleted, query.getDeleted());
         } else {
