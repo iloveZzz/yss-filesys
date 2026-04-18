@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.yss.filesys.domain.gateway.FileTransferTaskGateway;
 import com.yss.filesys.domain.model.FileTransferTask;
 import com.yss.filesys.domain.model.TransferTaskStatus;
+import com.yss.filesys.domain.model.TransferTaskType;
 import com.yss.filesys.infra.repository.convertor.FileTransferTaskConvertor;
 import com.yss.filesys.infra.repository.entity.FileTransferTaskPO;
 import com.yss.filesys.infra.repository.mapper.FileTransferTaskMapper;
@@ -45,13 +46,16 @@ public class FileTransferTaskGatewayImpl implements FileTransferTaskGateway {
     }
 
     @Override
-    public List<FileTransferTask> listByUserId(String userId) {
-        return fileTransferTaskMapper.selectList(new LambdaQueryWrapper<FileTransferTaskPO>()
-                        .eq(FileTransferTaskPO::getUserId, userId)
-                        .orderByDesc(FileTransferTaskPO::getCreatedAt))
+    public List<FileTransferTask> listByUserId(String userId, Integer statusType) {
+        return fileTransferTaskMapper.selectList(buildQuery(userId, statusType))
                 .stream()
                 .map(FileTransferTaskConvertor::toDomain)
                 .toList();
+    }
+
+    @Override
+    public long countByUserId(String userId, Integer statusType) {
+        return fileTransferTaskMapper.selectCount(buildQuery(userId, statusType));
     }
 
     @Override
@@ -94,5 +98,30 @@ public class FileTransferTaskGatewayImpl implements FileTransferTaskGateway {
         }
         fileTransferTaskMapper.delete(new LambdaQueryWrapper<FileTransferTaskPO>()
                 .in(FileTransferTaskPO::getTaskId, taskIds));
+    }
+
+    private LambdaQueryWrapper<FileTransferTaskPO> buildQuery(String userId, Integer statusType) {
+        LambdaQueryWrapper<FileTransferTaskPO> query = new LambdaQueryWrapper<FileTransferTaskPO>()
+                .eq(FileTransferTaskPO::getUserId, userId)
+                .orderByDesc(FileTransferTaskPO::getCreatedAt);
+        if (statusType == null) {
+            return query;
+        }
+        return switch (statusType) {
+            case 1 -> query.eq(FileTransferTaskPO::getTaskType, TransferTaskType.upload.name())
+                    .notIn(FileTransferTaskPO::getStatus, terminalStatuses());
+            case 2 -> query.eq(FileTransferTaskPO::getTaskType, TransferTaskType.download.name())
+                    .notIn(FileTransferTaskPO::getStatus, terminalStatuses());
+            case 3 -> query.eq(FileTransferTaskPO::getStatus, TransferTaskStatus.completed.name());
+            default -> query;
+        };
+    }
+
+    private List<String> terminalStatuses() {
+        return List.of(
+                TransferTaskStatus.completed.name(),
+                TransferTaskStatus.failed.name(),
+                TransferTaskStatus.canceled.name()
+        );
     }
 }

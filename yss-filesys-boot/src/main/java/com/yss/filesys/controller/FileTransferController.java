@@ -7,6 +7,7 @@ import com.yss.filesys.application.command.MergeChunksCommand;
 import com.yss.filesys.application.command.UploadChunkCommand;
 import com.yss.filesys.application.dto.CheckUploadResultDTO;
 import com.yss.filesys.application.dto.FileTransferTaskDTO;
+import com.yss.filesys.application.dto.FileTransferStatsDTO;
 import com.yss.filesys.application.dto.InitDownloadResultDTO;
 import com.yss.filesys.application.port.FileTransferCommandUseCase;
 import com.yss.filesys.application.port.FileTransferQueryUseCase;
@@ -210,6 +211,15 @@ public class FileTransferController {
     @Operation(summary = "按用户查询传输任务")
     public MultiResult<FileTransferTaskDTO> listByUser(@RequestParam(required = false) Integer statusType) {
         return MultiResult.ok(fileTransferQueryUseCase.listByUserId(AnonymousUserContext.userId(), statusType));
+    }
+
+    /**
+     * 查询传输统计
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "查询传输统计")
+    public SingleResult<FileTransferStatsDTO> stats() {
+        return SingleResult.ok(fileTransferQueryUseCase.getStats(AnonymousUserContext.userId()));
     }
 
     /**

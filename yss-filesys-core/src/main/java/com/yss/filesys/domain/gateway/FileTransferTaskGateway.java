@@ -14,7 +14,9 @@ public interface FileTransferTaskGateway {
 
     Optional<FileTransferTask> findByTaskId(String taskId);
 
-    List<FileTransferTask> listByUserId(String userId);
+    List<FileTransferTask> listByUserId(String userId, Integer statusType);
+
+    long countByUserId(String userId, Integer statusType);
 
     List<FileTransferTask> listFinishedBefore(LocalDateTime cutoff);
 

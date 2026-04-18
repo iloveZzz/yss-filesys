@@ -7,6 +7,7 @@ import com.yss.filesys.application.command.MergeChunksCommand;
 import com.yss.filesys.application.command.UploadChunkCommand;
 import com.yss.filesys.application.dto.CheckUploadResultDTO;
 import com.yss.filesys.application.dto.FileTransferTaskDTO;
+import com.yss.filesys.application.dto.FileTransferStatsDTO;
 import com.yss.filesys.application.dto.InitDownloadResultDTO;
 import com.yss.filesys.application.port.FileTransferCommandUseCase;
 import com.yss.filesys.application.port.FileTransferQueryUseCase;
@@ -342,10 +343,19 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
     @Override
     public List<FileTransferTaskDTO> listByUserId(String userId, Integer statusType) {
         userId = resolveUserId(userId);
-        return fileTransferTaskGateway.listByUserId(userId).stream()
-                .filter(task -> matchStatusType(task, statusType))
+        return fileTransferTaskGateway.listByUserId(userId, statusType).stream()
                 .map(this::toDTO)
                 .toList();
+    }
+
+    @Override
+    public FileTransferStatsDTO getStats(String userId) {
+        userId = resolveUserId(userId);
+        return FileTransferStatsDTO.builder()
+                .uploadingCount(fileTransferTaskGateway.countByUserId(userId, 1))
+                .downloadingCount(fileTransferTaskGateway.countByUserId(userId, 2))
+                .completedCount(fileTransferTaskGateway.countByUserId(userId, 3))
+                .build();
     }
 
     @Override
@@ -439,9 +449,7 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
     @Transactional(rollbackFor = Exception.class)
     public void clearFinished(String userId) {
         userId = resolveUserId(userId);
-        List<FileTransferTask> tasks = fileTransferTaskGateway.listByUserId(userId).stream()
-                .filter(task -> task.getStatus() == TransferTaskStatus.completed)
-                .toList();
+        List<FileTransferTask> tasks = fileTransferTaskGateway.listByUserId(userId, 3);
         if (tasks.isEmpty()) {
             return;
         }
@@ -571,24 +579,6 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
             return 0L;
         }
         return Math.min(chunkSize, task.getFileSize() - start);
-    }
-
-    private boolean matchStatusType(FileTransferTask task, Integer statusType) {
-        if (statusType == null) {
-            return true;
-        }
-        return switch (statusType) {
-            case 1 -> task.getTaskType() == TransferTaskType.upload;
-            case 2 -> task.getTaskType() == TransferTaskType.download;
-            case 3 -> isFinished(task);
-            default -> true;
-        };
-    }
-
-    private boolean isFinished(FileTransferTask task) {
-        return task.getStatus() == TransferTaskStatus.completed
-                || task.getStatus() == TransferTaskStatus.failed
-                || task.getStatus() == TransferTaskStatus.canceled;
     }
 
     private int countUploadedChunks(Path chunkDir) throws IOException {
