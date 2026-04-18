@@ -2,6 +2,7 @@ package com.yss.filesys.controller;
 
 import com.yss.filesys.application.command.UpdateStorageSettingStatusCommand;
 import com.yss.filesys.application.command.UpsertStorageSettingCommand;
+import com.yss.filesys.application.dto.StorageCapacityDTO;
 import com.yss.filesys.application.dto.StorageActivePlatformDTO;
 import com.yss.filesys.application.dto.StoragePlatformDTO;
 import com.yss.filesys.application.dto.StorageSettingDTO;
@@ -88,6 +89,15 @@ public class StorageController {
     @Operation(summary = "获取已启用存储配置列表")
     public MultiResult<StorageActivePlatformDTO> listActivePlatforms() {
         return MultiResult.ok(storageQueryUseCase.listActivePlatforms(AnonymousUserContext.userId()));
+    }
+
+    /**
+     * 获取存储容量统计
+     */
+    @GetMapping("/capacity")
+    @Operation(summary = "获取存储容量统计")
+    public SingleResult<StorageCapacityDTO> getCapacity(@org.springframework.web.bind.annotation.RequestParam(required = false) String settingId) {
+        return SingleResult.ok(storageQueryUseCase.getCapacity(settingId));
     }
 
     /**

@@ -3,6 +3,7 @@ package com.yss.filesys.application.port;
 import com.yss.filesys.application.dto.StoragePlatformDTO;
 import com.yss.filesys.application.dto.StorageSettingDTO;
 import com.yss.filesys.application.dto.StorageActivePlatformDTO;
+import com.yss.filesys.application.dto.StorageCapacityDTO;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,4 +17,6 @@ public interface StorageQueryUseCase {
     List<StorageSettingDTO> listSettingsByUser(String userId);
 
     List<StorageActivePlatformDTO> listActivePlatforms(String userId);
+
+    StorageCapacityDTO getCapacity(String settingId);
 }

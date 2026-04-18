@@ -3,6 +3,7 @@ package com.yss.filesys.application.impl;
 import com.yss.filesys.application.command.UpdateStorageSettingStatusCommand;
 import com.yss.filesys.application.command.UpsertStorageSettingCommand;
 import com.yss.filesys.application.dto.StorageActivePlatformDTO;
+import com.yss.filesys.application.dto.StorageCapacityDTO;
 import com.yss.filesys.application.dto.StoragePlatformDTO;
 import com.yss.filesys.application.dto.StorageSettingDTO;
 import com.yss.filesys.application.port.StorageCommandUseCase;
@@ -13,6 +14,9 @@ import com.yss.filesys.domain.gateway.StorageSettingGateway;
 import com.yss.filesys.domain.model.BizException;
 import com.yss.filesys.domain.model.StoragePlatform;
 import com.yss.filesys.domain.model.StorageSetting;
+import com.yss.filesys.storage.plugin.boot.StorageServiceFacade;
+import com.yss.filesys.storage.plugin.core.IStorageOperationService;
+import com.yss.filesys.storage.plugin.core.config.StorageUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +32,7 @@ public class StorageAppService implements StorageCommandUseCase, StorageQueryUse
 
     private final StoragePlatformGateway storagePlatformGateway;
     private final StorageSettingGateway storageSettingGateway;
+    private final StorageServiceFacade storageServiceFacade;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -107,6 +112,14 @@ public class StorageAppService implements StorageCommandUseCase, StorageQueryUse
             return active;
         }
         return List.of(buildLocalActivePlatformDTO());
+    }
+
+    @Override
+    public StorageCapacityDTO getCapacity(String settingId) {
+        IStorageOperationService storageService = StorageUtils.isLocalConfig(settingId)
+                ? storageServiceFacade.getCurrentStorageService()
+                : storageServiceFacade.getStorageService(settingId);
+        return storageService.getCapacity();
     }
 
     private String resolveUserId(String userId) {

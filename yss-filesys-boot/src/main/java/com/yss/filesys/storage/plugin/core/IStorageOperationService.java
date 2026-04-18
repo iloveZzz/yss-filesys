@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.yss.filesys.application.dto.StorageCapacityDTO;
+
 public interface IStorageOperationService extends Closeable {
 
     IStorageOperationService createConfiguredInstance(StorageConfig config);
@@ -28,6 +30,8 @@ public interface IStorageOperationService extends Closeable {
     InputStream getFileStream(String objectKey);
 
     boolean isFileExist(String objectKey);
+
+    StorageCapacityDTO getCapacity();
 
     String initiateMultipartUpload(String objectKey, String mimeType);
 

@@ -1,6 +1,7 @@
 package com.yss.filesys.storage.plugin.local;
 
 import com.yss.filesys.domain.model.BizException;
+import com.yss.filesys.application.dto.StorageCapacityDTO;
 import com.yss.filesys.storage.plugin.core.AbstractStorageOperationService;
 import com.yss.filesys.storage.plugin.core.annotation.StoragePlugin;
 import com.yss.filesys.storage.plugin.core.config.StorageConfig;
@@ -16,6 +17,7 @@ import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.FileStore;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -141,6 +143,30 @@ public class LocalStorageOperationService extends AbstractStorageOperationServic
     @Override
     public boolean isFileExist(String objectKey) {
         return Files.exists(resolveObjectPath(objectKey));
+    }
+
+    @Override
+    public StorageCapacityDTO getCapacity() {
+        ensureNotPrototype();
+        try {
+            Path root = Path.of(storageRoot);
+            Files.createDirectories(root);
+            FileStore fileStore = Files.getFileStore(root);
+            long totalBytes = Math.max(0L, fileStore.getTotalSpace());
+            long usableBytes = Math.max(0L, fileStore.getUsableSpace());
+            long usedBytes = Math.max(0L, totalBytes - usableBytes);
+            return StorageCapacityDTO.builder()
+                    .settingId(config.getConfigId() == null ? StorageUtils.LOCAL_PLATFORM_IDENTIFIER : config.getConfigId())
+                    .platformIdentifier(StorageUtils.LOCAL_PLATFORM_IDENTIFIER)
+                    .totalBytes(totalBytes)
+                    .usedBytes(usedBytes)
+                    .freeBytes(usableBytes)
+                    .usableBytes(usableBytes)
+                    .storageRoot(storageRoot)
+                    .build();
+        } catch (IOException e) {
+            throw new BizException("获取存储容量失败: " + e.getMessage());
+        }
     }
 
     @Override
