@@ -7,8 +7,9 @@ import com.yss.filesys.application.dto.StoragePlatformDTO;
 import com.yss.filesys.application.dto.StorageSettingDTO;
 import com.yss.filesys.application.port.StorageCommandUseCase;
 import com.yss.filesys.application.port.StorageQueryUseCase;
-import com.yss.filesys.common.ApiResponse;
 import com.yss.filesys.common.AnonymousUserContext;
+import com.yss.filesys.common.MultiResult;
+import com.yss.filesys.common.SingleResult;
 import com.yss.filesys.domain.model.BizException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -56,8 +57,8 @@ public class StorageController {
      */
     @GetMapping("/platforms")
     @Operation(summary = "查询存储平台列表")
-    public ApiResponse<List<StoragePlatformDTO>> listPlatforms() {
-        return ApiResponse.ok(storageQueryUseCase.listPlatforms());
+    public MultiResult<StoragePlatformDTO> listPlatforms() {
+        return MultiResult.ok(storageQueryUseCase.listPlatforms());
     }
 
     /**
@@ -65,8 +66,8 @@ public class StorageController {
      */
     @GetMapping("/platform/{identifier}")
     @Operation(summary = "根据标识符查询存储平台")
-    public ApiResponse<StoragePlatformDTO> getPlatformByIdentifier(@PathVariable String identifier) {
-        return ApiResponse.ok(storageQueryUseCase.getPlatformByIdentifier(identifier)
+    public SingleResult<StoragePlatformDTO> getPlatformByIdentifier(@PathVariable String identifier) {
+        return SingleResult.ok(storageQueryUseCase.getPlatformByIdentifier(identifier)
                 .orElseThrow(() -> new BizException("存储平台不存在: " + identifier)));
     }
 
@@ -76,8 +77,8 @@ public class StorageController {
      */
     @GetMapping("/settings")
     @Operation(summary = "按用户查询存储配置")
-    public ApiResponse<List<StorageSettingDTO>> listSettings() {
-        return ApiResponse.ok(storageQueryUseCase.listSettingsByUser(AnonymousUserContext.userId()));
+    public MultiResult<StorageSettingDTO> listSettings() {
+        return MultiResult.ok(storageQueryUseCase.listSettingsByUser(AnonymousUserContext.userId()));
     }
 
     /**
@@ -85,8 +86,8 @@ public class StorageController {
      */
     @GetMapping("/active-platforms")
     @Operation(summary = "获取已启用存储配置列表")
-    public ApiResponse<List<StorageActivePlatformDTO>> listActivePlatforms() {
-        return ApiResponse.ok(storageQueryUseCase.listActivePlatforms(AnonymousUserContext.userId()));
+    public MultiResult<StorageActivePlatformDTO> listActivePlatforms() {
+        return MultiResult.ok(storageQueryUseCase.listActivePlatforms(AnonymousUserContext.userId()));
     }
 
     /**
@@ -97,9 +98,9 @@ public class StorageController {
      */
     @PostMapping("/settings")
     @Operation(summary = "新增或更新存储配置")
-    public ApiResponse<StorageSettingDTO> upsert(@Valid @RequestBody UpsertStorageSettingCommand command) {
+    public SingleResult<StorageSettingDTO> upsert(@Valid @RequestBody UpsertStorageSettingCommand command) {
         command.setUserId(AnonymousUserContext.userId());
-        return ApiResponse.ok(storageCommandUseCase.upsert(command));
+        return SingleResult.ok(storageCommandUseCase.upsert(command));
     }
 
     /**
@@ -111,12 +112,12 @@ public class StorageController {
      */
     @PutMapping("/settings/{id}/status/{enabled}")
     @Operation(summary = "启用或禁用存储配置")
-    public ApiResponse<Void> updateStatus(@PathVariable String id, @PathVariable Integer enabled) {
+    public SingleResult<Void> updateStatus(@PathVariable String id, @PathVariable Integer enabled) {
         UpdateStorageSettingStatusCommand command = new UpdateStorageSettingStatusCommand();
         command.setId(id);
         command.setEnabled(enabled);
         storageCommandUseCase.updateStatus(command);
-        return ApiResponse.ok();
+        return SingleResult.ok();
     }
 
     /**
@@ -124,8 +125,8 @@ public class StorageController {
      */
     @DeleteMapping("/settings/{id}")
     @Operation(summary = "删除存储配置")
-    public ApiResponse<Void> deleteSetting(@PathVariable String id) {
+    public SingleResult<Void> deleteSetting(@PathVariable String id) {
         storageCommandUseCase.delete(id);
-        return ApiResponse.ok();
+        return SingleResult.ok();
     }
 }

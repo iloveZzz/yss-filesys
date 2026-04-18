@@ -11,8 +11,9 @@ import com.yss.filesys.application.dto.InitDownloadResultDTO;
 import com.yss.filesys.application.port.FileTransferCommandUseCase;
 import com.yss.filesys.application.port.FileTransferQueryUseCase;
 import com.yss.filesys.application.query.DownloadChunkQuery;
-import com.yss.filesys.common.ApiResponse;
 import com.yss.filesys.common.AnonymousUserContext;
+import com.yss.filesys.common.MultiResult;
+import com.yss.filesys.common.SingleResult;
 import com.yss.filesys.domain.model.FileRecord;
 import com.yss.filesys.service.TransferSseService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -86,9 +87,9 @@ public class FileTransferController {
      */
     @PostMapping("/upload/init")
     @Operation(summary = "初始化上传任务")
-    public ApiResponse<FileTransferTaskDTO> initUpload(@Valid @RequestBody InitTransferUploadCommand command) {
+    public SingleResult<FileTransferTaskDTO> initUpload(@Valid @RequestBody InitTransferUploadCommand command) {
         command.setUserId(AnonymousUserContext.userId());
-        return ApiResponse.ok(fileTransferCommandUseCase.initUpload(command));
+        return SingleResult.ok(fileTransferCommandUseCase.initUpload(command));
     }
 
     /**
@@ -99,8 +100,8 @@ public class FileTransferController {
      */
     @PostMapping("/upload/check")
     @Operation(summary = "上传前 MD5 校验")
-    public ApiResponse<CheckUploadResultDTO> checkUpload(@Valid @RequestBody CheckUploadCommand command) {
-        return ApiResponse.ok(fileTransferCommandUseCase.checkUpload(command));
+    public SingleResult<CheckUploadResultDTO> checkUpload(@Valid @RequestBody CheckUploadCommand command) {
+        return SingleResult.ok(fileTransferCommandUseCase.checkUpload(command));
     }
 
     /**
@@ -115,16 +116,16 @@ public class FileTransferController {
      */
     @PostMapping("/upload/chunk")
     @Operation(summary = "上传分片")
-    public ApiResponse<Void> uploadChunk(@RequestParam("file") MultipartFile file,
-                                         @RequestParam("taskId") String taskId,
-                                         @RequestParam("chunkIndex") Integer chunkIndex,
-                                         @RequestParam(value = "chunkMd5", required = false) String chunkMd5) throws Exception {
+    public SingleResult<Void> uploadChunk(@RequestParam("file") MultipartFile file,
+                                          @RequestParam("taskId") String taskId,
+                                          @RequestParam("chunkIndex") Integer chunkIndex,
+                                          @RequestParam(value = "chunkMd5", required = false) String chunkMd5) throws Exception {
         UploadChunkCommand command = new UploadChunkCommand();
         command.setTaskId(taskId);
         command.setChunkIndex(chunkIndex);
         command.setChunkMd5(chunkMd5);
         fileTransferCommandUseCase.uploadChunk(command, file.getBytes());
-        return ApiResponse.ok();
+        return SingleResult.ok();
     }
 
     /**
@@ -135,8 +136,8 @@ public class FileTransferController {
      */
     @PostMapping("/upload/merge")
     @Operation(summary = "手动触发合并")
-    public ApiResponse<FileRecord> merge(@Valid @RequestBody MergeChunksCommand command) {
-        return ApiResponse.ok(fileTransferCommandUseCase.mergeChunks(command));
+    public SingleResult<FileRecord> merge(@Valid @RequestBody MergeChunksCommand command) {
+        return SingleResult.ok(fileTransferCommandUseCase.mergeChunks(command));
     }
 
     /**
@@ -147,9 +148,9 @@ public class FileTransferController {
      */
     @PostMapping("/download/init")
     @Operation(summary = "初始化下载任务")
-    public ApiResponse<InitDownloadResultDTO> initDownload(@Valid @RequestBody InitDownloadCommand command) {
+    public SingleResult<InitDownloadResultDTO> initDownload(@Valid @RequestBody InitDownloadCommand command) {
         command.setUserId(AnonymousUserContext.userId());
-        return ApiResponse.ok(fileTransferCommandUseCase.initDownload(command));
+        return SingleResult.ok(fileTransferCommandUseCase.initDownload(command));
     }
 
     /**
@@ -173,9 +174,9 @@ public class FileTransferController {
      */
     @PostMapping("/pause/{taskId}")
     @Operation(summary = "暂停传输任务")
-    public ApiResponse<Void> pause(@PathVariable String taskId) {
+    public SingleResult<Void> pause(@PathVariable String taskId) {
         fileTransferCommandUseCase.pause(taskId);
-        return ApiResponse.ok();
+        return SingleResult.ok();
     }
 
     /**
@@ -183,9 +184,9 @@ public class FileTransferController {
      */
     @PostMapping("/resume/{taskId}")
     @Operation(summary = "恢复传输任务")
-    public ApiResponse<Void> resume(@PathVariable String taskId) {
+    public SingleResult<Void> resume(@PathVariable String taskId) {
         fileTransferCommandUseCase.resume(taskId);
-        return ApiResponse.ok();
+        return SingleResult.ok();
     }
 
     /**
@@ -196,9 +197,9 @@ public class FileTransferController {
      */
     @DeleteMapping("/{taskId}")
     @Operation(summary = "取消传输任务")
-    public ApiResponse<Void> cancel(@PathVariable String taskId) {
+    public SingleResult<Void> cancel(@PathVariable String taskId) {
         fileTransferCommandUseCase.cancel(taskId);
-        return ApiResponse.ok();
+        return SingleResult.ok();
     }
 
     /**
@@ -207,8 +208,8 @@ public class FileTransferController {
      */
     @GetMapping({"", "/files"})
     @Operation(summary = "按用户查询传输任务")
-    public ApiResponse<List<FileTransferTaskDTO>> listByUser(@RequestParam(required = false) Integer statusType) {
-        return ApiResponse.ok(fileTransferQueryUseCase.listByUserId(AnonymousUserContext.userId(), statusType));
+    public MultiResult<FileTransferTaskDTO> listByUser(@RequestParam(required = false) Integer statusType) {
+        return MultiResult.ok(fileTransferQueryUseCase.listByUserId(AnonymousUserContext.userId(), statusType));
     }
 
     /**
@@ -219,8 +220,8 @@ public class FileTransferController {
      */
     @GetMapping("/{taskId}")
     @Operation(summary = "查询传输任务详情")
-    public ApiResponse<FileTransferTaskDTO> getByTaskId(@PathVariable String taskId) {
-        return ApiResponse.ok(fileTransferQueryUseCase.getByTaskId(taskId));
+    public SingleResult<FileTransferTaskDTO> getByTaskId(@PathVariable String taskId) {
+        return SingleResult.ok(fileTransferQueryUseCase.getByTaskId(taskId));
     }
 
     /**
@@ -228,8 +229,8 @@ public class FileTransferController {
      */
     @GetMapping("/chunks/{taskId}")
     @Operation(summary = "查询已上传分片")
-    public ApiResponse<List<Integer>> getUploadedChunks(@PathVariable String taskId) {
-        return ApiResponse.ok(fileTransferQueryUseCase.getUploadedChunks(taskId));
+    public MultiResult<Integer> getUploadedChunks(@PathVariable String taskId) {
+        return MultiResult.ok(fileTransferQueryUseCase.getUploadedChunks(taskId));
     }
 
     /**
@@ -237,8 +238,8 @@ public class FileTransferController {
      */
     @GetMapping("/download/chunks/{taskId}")
     @Operation(summary = "查询已下载分片")
-    public ApiResponse<List<Integer>> getDownloadedChunks(@PathVariable String taskId) {
-        return ApiResponse.ok(fileTransferQueryUseCase.getDownloadedChunks(taskId));
+    public MultiResult<Integer> getDownloadedChunks(@PathVariable String taskId) {
+        return MultiResult.ok(fileTransferQueryUseCase.getDownloadedChunks(taskId));
     }
 
     /**
@@ -246,8 +247,8 @@ public class FileTransferController {
      */
     @DeleteMapping("/clears")
     @Operation(summary = "清理已完成传输任务")
-    public ApiResponse<Void> clearTransfers() {
+    public SingleResult<Void> clearTransfers() {
         fileTransferCommandUseCase.clearFinished(AnonymousUserContext.userId());
-        return ApiResponse.ok();
+        return SingleResult.ok();
     }
 }

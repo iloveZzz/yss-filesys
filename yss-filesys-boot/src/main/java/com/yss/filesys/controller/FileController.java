@@ -17,8 +17,10 @@ import com.yss.filesys.application.port.FileFavoriteUseCase;
 import com.yss.filesys.application.port.FileQueryUseCase;
 import com.yss.filesys.application.port.FileRecycleUseCase;
 import com.yss.filesys.application.query.FileSearchQuery;
-import com.yss.filesys.common.ApiResponse;
 import com.yss.filesys.common.AnonymousUserContext;
+import com.yss.filesys.common.MultiResult;
+import com.yss.filesys.common.PageResult;
+import com.yss.filesys.common.SingleResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -37,8 +39,6 @@ import org.springframework.http.ResponseEntity;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-
 /**
  * 文件管理控制器
  * <p>
@@ -89,15 +89,15 @@ public class FileController {
      */
     @GetMapping
     @Operation(summary = "分页查询文件")
-    public ApiResponse<PageDTO<FileRecordDTO>> search(@RequestParam(required = false) String parentId,
-                                                      @RequestParam(required = false) String keyword,
-                                                      @RequestParam(required = false) String fileType,
-                                                      @RequestParam(required = false) Boolean isDir,
-                                                      @RequestParam(required = false) Boolean isRecents,
-                                                      @RequestParam(required = false) Boolean deleted,
-                                                      @RequestParam(required = false) Boolean favorite,
-                                                      @RequestParam(defaultValue = "1") long pageNo,
-                                                      @RequestParam(defaultValue = "20") long pageSize) {
+    public PageResult<FileRecordDTO> search(@RequestParam(required = false) String parentId,
+                                            @RequestParam(required = false) String keyword,
+                                            @RequestParam(required = false) String fileType,
+                                            @RequestParam(required = false) Boolean isDir,
+                                            @RequestParam(required = false) Boolean isRecents,
+                                            @RequestParam(required = false) Boolean deleted,
+                                            @RequestParam(required = false) Boolean favorite,
+                                            @RequestParam(defaultValue = "1") long pageNo,
+                                            @RequestParam(defaultValue = "20") long pageSize) {
         FileSearchQuery query = new FileSearchQuery();
         query.setUserId(AnonymousUserContext.userId());
         query.setParentId(parentId);
@@ -109,7 +109,7 @@ public class FileController {
         query.setFavorite(favorite);
         query.setPageNo(pageNo);
         query.setPageSize(pageSize);
-        return ApiResponse.ok(fileQueryUseCase.search(query));
+        return PageResult.ok(fileQueryUseCase.search(query));
     }
 
     /**
@@ -120,8 +120,8 @@ public class FileController {
      */
     @GetMapping("/{fileId}")
     @Operation(summary = "查询文件详情")
-    public ApiResponse<FileRecordDTO> getById(@PathVariable String fileId) {
-        return ApiResponse.ok(fileQueryUseCase.getById(fileId));
+    public SingleResult<FileRecordDTO> getById(@PathVariable String fileId) {
+        return SingleResult.ok(fileQueryUseCase.getById(fileId));
     }
 
     /**
@@ -132,9 +132,9 @@ public class FileController {
      */
     @PostMapping("/directory")
     @Operation(summary = "创建目录")
-    public ApiResponse<FileRecordDTO> createDirectory(@Valid @RequestBody CreateDirectoryCommand command) {
+    public SingleResult<FileRecordDTO> createDirectory(@Valid @RequestBody CreateDirectoryCommand command) {
         command.setUserId(AnonymousUserContext.userId());
-        return ApiResponse.ok(fileCommandUseCase.createDirectory(command));
+        return SingleResult.ok(fileCommandUseCase.createDirectory(command));
     }
 
     /**
@@ -144,8 +144,8 @@ public class FileController {
      */
     @GetMapping("/dirs")
     @Operation(summary = "查询目录列表")
-    public ApiResponse<java.util.List<DirectoryTreeDTO>> listDirs(@RequestParam(required = false) String parentId) {
-        return ApiResponse.ok(fileQueryUseCase.listDirs(AnonymousUserContext.userId(), parentId));
+    public MultiResult<DirectoryTreeDTO> listDirs(@RequestParam(required = false) String parentId) {
+        return MultiResult.ok(fileQueryUseCase.listDirs(AnonymousUserContext.userId(), parentId));
     }
 
     /**
@@ -157,10 +157,10 @@ public class FileController {
      */
     @PutMapping("/{fileId}/rename")
     @Operation(summary = "文件重命名")
-    public ApiResponse<Void> renameFile(@PathVariable String fileId, @Valid @RequestBody RenameFileCommand command) {
+    public SingleResult<Void> renameFile(@PathVariable String fileId, @Valid @RequestBody RenameFileCommand command) {
         command.setUserId(AnonymousUserContext.userId());
         fileCommandUseCase.renameFile(fileId, command);
-        return ApiResponse.ok();
+        return SingleResult.ok();
     }
 
     /**
@@ -171,10 +171,10 @@ public class FileController {
      */
     @PutMapping("/moves")
     @Operation(summary = "文件移动")
-    public ApiResponse<Void> moveFile(@Valid @RequestBody MoveFileCommand command) {
+    public SingleResult<Void> moveFile(@Valid @RequestBody MoveFileCommand command) {
         command.setUserId(AnonymousUserContext.userId());
         fileCommandUseCase.moveFile(command);
-        return ApiResponse.ok();
+        return SingleResult.ok();
     }
 
     /**
@@ -184,8 +184,8 @@ public class FileController {
      */
     @GetMapping("/directory/{dirId}/path")
     @Operation(summary = "获取目录层级")
-    public ApiResponse<java.util.List<FileRecordDTO>> getDirectoryTreePath(@PathVariable String dirId) {
-        return ApiResponse.ok(fileQueryUseCase.getDirectoryTreePath(AnonymousUserContext.userId(), dirId));
+    public MultiResult<FileRecordDTO> getDirectoryTreePath(@PathVariable String dirId) {
+        return MultiResult.ok(fileQueryUseCase.getDirectoryTreePath(AnonymousUserContext.userId(), dirId));
     }
 
     /**
@@ -194,9 +194,9 @@ public class FileController {
      */
     @GetMapping("/url/{fileId}")
     @Operation(summary = "获取文件URL")
-    public ApiResponse<String> getFileUrl(@PathVariable String fileId,
-                                          @RequestParam(required = false) Integer expireSeconds) {
-        return ApiResponse.ok(fileQueryUseCase.getFileUrl(fileId, AnonymousUserContext.userId(), expireSeconds));
+    public SingleResult<String> getFileUrl(@PathVariable String fileId,
+                                            @RequestParam(required = false) Integer expireSeconds) {
+        return SingleResult.ok(fileQueryUseCase.getFileUrl(fileId, AnonymousUserContext.userId(), expireSeconds));
     }
 
     /**
@@ -223,9 +223,9 @@ public class FileController {
      */
     @DeleteMapping("/recycle")
     @Operation(summary = "批量移入回收站")
-    public ApiResponse<Void> moveToRecycle(@Valid @RequestBody MoveToRecycleBinCommand command) {
+    public SingleResult<Void> moveToRecycle(@Valid @RequestBody MoveToRecycleBinCommand command) {
         fileCommandUseCase.moveToRecycleBin(command);
-        return ApiResponse.ok();
+        return SingleResult.ok();
     }
 
     /**
@@ -237,16 +237,16 @@ public class FileController {
      */
     @GetMapping("/recycle")
     @Operation(summary = "分页查询回收站文件")
-    public ApiResponse<PageDTO<FileRecordDTO>> recycle(@RequestParam(required = false) String keyword,
-                                                      @RequestParam(defaultValue = "1") long pageNo,
-                                                      @RequestParam(defaultValue = "20") long pageSize) {
+    public PageResult<FileRecordDTO> recycle(@RequestParam(required = false) String keyword,
+                                             @RequestParam(defaultValue = "1") long pageNo,
+                                             @RequestParam(defaultValue = "20") long pageSize) {
         FileSearchQuery query = new FileSearchQuery();
         query.setUserId(AnonymousUserContext.userId());
         query.setKeyword(keyword);
         query.setDeleted(true);
         query.setPageNo(pageNo);
         query.setPageSize(pageSize);
-        return ApiResponse.ok(fileQueryUseCase.search(query));
+        return PageResult.ok(fileQueryUseCase.search(query));
     }
 
     /**
@@ -257,10 +257,10 @@ public class FileController {
      */
     @PutMapping("/recycle/restore")
     @Operation(summary = "恢复回收站文件")
-    public ApiResponse<Void> restore(@Valid @RequestBody RestoreRecycleCommand command) {
+    public SingleResult<Void> restore(@Valid @RequestBody RestoreRecycleCommand command) {
         command.setUserId(AnonymousUserContext.userId());
         fileRecycleUseCase.restore(command);
-        return ApiResponse.ok();
+        return SingleResult.ok();
     }
 
     /**
@@ -271,10 +271,10 @@ public class FileController {
      */
     @DeleteMapping("/recycle/permanent")
     @Operation(summary = "永久删除回收站文件")
-    public ApiResponse<Void> permanentlyDelete(@Valid @RequestBody PermanentlyDeleteRecycleCommand command) {
+    public SingleResult<Void> permanentlyDelete(@Valid @RequestBody PermanentlyDeleteRecycleCommand command) {
         command.setUserId(AnonymousUserContext.userId());
         fileRecycleUseCase.permanentlyDelete(command);
-        return ApiResponse.ok();
+        return SingleResult.ok();
     }
 
     /**
@@ -285,10 +285,10 @@ public class FileController {
      */
     @DeleteMapping("/recycle/clear")
     @Operation(summary = "清空回收站")
-    public ApiResponse<Void> clearRecycle(@Valid @RequestBody ClearRecycleCommand command) {
+    public SingleResult<Void> clearRecycle(@Valid @RequestBody ClearRecycleCommand command) {
         command.setUserId(AnonymousUserContext.userId());
         fileRecycleUseCase.clearRecycle(command);
-        return ApiResponse.ok();
+        return SingleResult.ok();
     }
 
     /**
@@ -299,10 +299,10 @@ public class FileController {
      */
     @PostMapping("/favorites")
     @Operation(summary = "收藏文件")
-    public ApiResponse<Void> favorite(@Valid @RequestBody FavoriteFilesCommand command) {
+    public SingleResult<Void> favorite(@Valid @RequestBody FavoriteFilesCommand command) {
         command.setUserId(AnonymousUserContext.userId());
         fileFavoriteUseCase.favorite(command);
-        return ApiResponse.ok();
+        return SingleResult.ok();
     }
 
     /**
@@ -313,10 +313,10 @@ public class FileController {
      */
     @DeleteMapping("/favorites")
     @Operation(summary = "取消收藏文件")
-    public ApiResponse<Void> unfavorite(@Valid @RequestBody FavoriteFilesCommand command) {
+    public SingleResult<Void> unfavorite(@Valid @RequestBody FavoriteFilesCommand command) {
         command.setUserId(AnonymousUserContext.userId());
         fileFavoriteUseCase.unfavorite(command);
-        return ApiResponse.ok();
+        return SingleResult.ok();
     }
 
     /**
@@ -325,7 +325,7 @@ public class FileController {
      */
     @GetMapping("/favorites/count")
     @Operation(summary = "获取收藏数量")
-    public ApiResponse<Long> favoritesCount() {
-        return ApiResponse.ok(fileFavoriteUseCase.count(AnonymousUserContext.userId()));
+    public SingleResult<Long> favoritesCount() {
+        return SingleResult.ok(fileFavoriteUseCase.count(AnonymousUserContext.userId()));
     }
 }

@@ -2,7 +2,7 @@ package com.yss.filesys.controller;
 
 import com.yss.filesys.application.dto.FilePreviewDTO;
 import com.yss.filesys.application.port.FilePreviewUseCase;
-import com.yss.filesys.common.ApiResponse;
+import com.yss.filesys.common.SingleResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,8 +40,8 @@ public class FilePreviewController {
      */
     @PostMapping("/token/{fileId}")
     @Operation(summary = "获取预览 token")
-    public ApiResponse<String> issueToken(@PathVariable String fileId) {
-        return ApiResponse.ok(filePreviewUseCase.issueToken(fileId));
+    public SingleResult<String> issueToken(@PathVariable String fileId) {
+        return SingleResult.ok(filePreviewUseCase.issueToken(fileId));
     }
 
     /**
@@ -53,8 +53,8 @@ public class FilePreviewController {
      */
     @GetMapping("/{fileId}")
     @Operation(summary = "获取预览信息")
-    public ApiResponse<FilePreviewDTO> preview(@PathVariable String fileId, @RequestParam String previewToken) {
-        return ApiResponse.ok(filePreviewUseCase.preview(fileId, previewToken));
+    public SingleResult<FilePreviewDTO> preview(@PathVariable String fileId, @RequestParam String previewToken) {
+        return SingleResult.ok(filePreviewUseCase.preview(fileId, previewToken));
     }
 
     /**
@@ -66,8 +66,8 @@ public class FilePreviewController {
      */
     @PostMapping("/archive/token/{archiveFileId}")
     @Operation(summary = "获取压缩包内文件预览 token")
-    public ApiResponse<String> issueArchiveToken(@PathVariable String archiveFileId, @RequestParam String innerPath) {
-        return ApiResponse.ok(filePreviewUseCase.issueArchiveToken(archiveFileId, innerPath));
+    public SingleResult<String> issueArchiveToken(@PathVariable String archiveFileId, @RequestParam String innerPath) {
+        return SingleResult.ok(filePreviewUseCase.issueArchiveToken(archiveFileId, innerPath));
     }
 
     /**
@@ -80,9 +80,9 @@ public class FilePreviewController {
      */
     @GetMapping("/archive/{archiveFileId}")
     @Operation(summary = "获取压缩包内文件预览信息")
-    public ApiResponse<FilePreviewDTO> previewArchive(@PathVariable String archiveFileId,
-                                                      @RequestParam String innerPath,
-                                                      @RequestParam String previewToken) {
-        return ApiResponse.ok(filePreviewUseCase.previewArchive(archiveFileId, innerPath, previewToken));
+    public SingleResult<FilePreviewDTO> previewArchive(@PathVariable String archiveFileId,
+                                                       @RequestParam String innerPath,
+                                                       @RequestParam String previewToken) {
+        return SingleResult.ok(filePreviewUseCase.previewArchive(archiveFileId, innerPath, previewToken));
     }
 }

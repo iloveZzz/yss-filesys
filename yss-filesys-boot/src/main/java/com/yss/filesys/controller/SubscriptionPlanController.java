@@ -6,7 +6,8 @@ import com.yss.filesys.application.dto.PageDTO;
 import com.yss.filesys.application.dto.SubscriptionPlanDTO;
 import com.yss.filesys.application.impl.SubscriptionPlanAppService;
 import com.yss.filesys.application.query.SubscriptionPlanPageQuery;
-import com.yss.filesys.common.ApiResponse;
+import com.yss.filesys.common.PageResult;
+import com.yss.filesys.common.SingleResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -49,8 +50,8 @@ public class SubscriptionPlanController {
      */
     @GetMapping("/pages")
     @Operation(summary = "分页获取套餐列表")
-    public ApiResponse<PageDTO<SubscriptionPlanDTO>> getPages(SubscriptionPlanPageQuery query) {
-        return ApiResponse.ok(subscriptionPlanAppService.page(query));
+    public PageResult<SubscriptionPlanDTO> getPages(SubscriptionPlanPageQuery query) {
+        return PageResult.ok(subscriptionPlanAppService.page(query));
     }
 
     /**
@@ -61,8 +62,8 @@ public class SubscriptionPlanController {
      */
     @GetMapping("/info/{id}")
     @Operation(summary = "获取套餐详细信息")
-    public ApiResponse<SubscriptionPlanDTO> getDetail(@PathVariable Long id) {
-        return ApiResponse.ok(subscriptionPlanAppService.detail(id));
+    public SingleResult<SubscriptionPlanDTO> getDetail(@PathVariable Long id) {
+        return SingleResult.ok(subscriptionPlanAppService.detail(id));
     }
 
     /**
@@ -73,9 +74,9 @@ public class SubscriptionPlanController {
      */
     @PostMapping
     @Operation(summary = "添加套餐")
-    public ApiResponse<Void> add(@Valid @RequestBody SubscriptionPlanAddCommand command) {
+    public SingleResult<Void> add(@Valid @RequestBody SubscriptionPlanAddCommand command) {
         subscriptionPlanAppService.add(command);
-        return ApiResponse.ok();
+        return SingleResult.ok();
     }
 
     /**
@@ -86,9 +87,9 @@ public class SubscriptionPlanController {
      */
     @PutMapping
     @Operation(summary = "编辑套餐")
-    public ApiResponse<Void> edit(@Valid @RequestBody SubscriptionPlanEditCommand command) {
+    public SingleResult<Void> edit(@Valid @RequestBody SubscriptionPlanEditCommand command) {
         subscriptionPlanAppService.edit(command);
-        return ApiResponse.ok();
+        return SingleResult.ok();
     }
 
     /**
@@ -99,8 +100,8 @@ public class SubscriptionPlanController {
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "根据ID删除套餐")
-    public ApiResponse<Void> delete(@PathVariable Long id) {
+    public SingleResult<Void> delete(@PathVariable Long id) {
         subscriptionPlanAppService.delete(id);
-        return ApiResponse.ok();
+        return SingleResult.ok();
     }
 }
