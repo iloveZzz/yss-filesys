@@ -8,6 +8,7 @@ import com.yss.filesys.application.command.MoveToRecycleBinCommand;
 import com.yss.filesys.application.command.PermanentlyDeleteRecycleCommand;
 import com.yss.filesys.application.command.RenameFileCommand;
 import com.yss.filesys.application.command.RestoreRecycleCommand;
+import com.yss.filesys.application.dto.DirectoryTreeDTO;
 import com.yss.filesys.application.dto.FileDownloadDTO;
 import com.yss.filesys.application.dto.FileRecordDTO;
 import com.yss.filesys.application.dto.PageDTO;
@@ -143,7 +144,7 @@ public class FileController {
      */
     @GetMapping("/dirs")
     @Operation(summary = "查询目录列表")
-    public ApiResponse<java.util.List<FileRecordDTO>> listDirs(@RequestParam(required = false) String parentId) {
+    public ApiResponse<java.util.List<DirectoryTreeDTO>> listDirs(@RequestParam(required = false) String parentId) {
         return ApiResponse.ok(fileQueryUseCase.listDirs(AnonymousUserContext.userId(), parentId));
     }
 

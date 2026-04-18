@@ -1,6 +1,7 @@
 package com.yss.filesys.application.port;
 
 import com.yss.filesys.application.dto.FileDownloadDTO;
+import com.yss.filesys.application.dto.DirectoryTreeDTO;
 import com.yss.filesys.application.dto.FileRecordDTO;
 import com.yss.filesys.application.dto.PageDTO;
 import com.yss.filesys.application.query.FileSearchQuery;
@@ -13,7 +14,7 @@ public interface FileQueryUseCase {
 
     FileRecordDTO getById(String fileId);
 
-    List<FileRecordDTO> listDirs(String userId, String parentId);
+    List<DirectoryTreeDTO> listDirs(String userId, String parentId);
 
     List<FileRecordDTO> getDirectoryTreePath(String userId, String dirId);
 

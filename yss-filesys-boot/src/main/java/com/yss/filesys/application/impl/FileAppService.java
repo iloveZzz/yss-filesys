@@ -9,6 +9,7 @@ import com.yss.filesys.application.command.PermanentlyDeleteRecycleCommand;
 import com.yss.filesys.application.command.RenameFileCommand;
 import com.yss.filesys.application.command.RestoreRecycleCommand;
 import com.yss.filesys.application.dto.FileDownloadDTO;
+import com.yss.filesys.application.dto.DirectoryTreeDTO;
 import com.yss.filesys.application.dto.FileRecordDTO;
 import com.yss.filesys.application.dto.PageDTO;
 import com.yss.filesys.application.port.FileCommandUseCase;
@@ -204,7 +205,7 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
     }
 
     @Override
-    public List<FileRecordDTO> listDirs(String userId, String parentId) {
+    public List<DirectoryTreeDTO> listDirs(String userId, String parentId) {
         userId = resolveUserId(userId);
         List<FileRecord> records = fileRecordGateway.listByUserAndDeleted(userId, false).stream()
                 .filter(record -> Boolean.TRUE.equals(record.getIsDir()))
@@ -327,10 +328,6 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
     }
 
     private FileRecordDTO toDTO(FileRecord record, boolean favorite) {
-        return toDTO(record, favorite, List.of());
-    }
-
-    private FileRecordDTO toDTO(FileRecord record, boolean favorite, List<FileRecordDTO> children) {
         return FileRecordDTO.builder()
                 .fileId(record.getFileId())
                 .originalName(record.getOriginalName())
@@ -345,13 +342,31 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
                 .isFavorite(favorite)
                 .uploadTime(record.getUploadTime())
                 .updateTime(record.getUpdateTime())
+                .build();
+    }
+
+    private DirectoryTreeDTO toDirectoryTree(FileRecord record, List<DirectoryTreeDTO> children) {
+        return DirectoryTreeDTO.builder()
+                .fileId(record.getFileId())
+                .originalName(record.getOriginalName())
+                .displayName(record.getDisplayName())
+                .suffix(record.getSuffix())
+                .size(record.getSize())
+                .isDir(record.getIsDir())
+                .parentId(record.getParentId())
+                .userId(record.getUserId())
+                .storageSettingId(record.getStorageSettingId())
+                .isDeleted(record.getIsDeleted())
+                .isFavorite(false)
+                .uploadTime(record.getUploadTime())
+                .updateTime(record.getUpdateTime())
                 .children(children == null ? List.of() : children)
                 .build();
     }
 
-    private List<FileRecordDTO> buildDirectoryTree(List<FileRecord> records,
-                                                   Map<String, List<FileRecord>> childrenByParent,
-                                                   Set<String> visiting) {
+    private List<DirectoryTreeDTO> buildDirectoryTree(List<FileRecord> records,
+                                                     Map<String, List<FileRecord>> childrenByParent,
+                                                     Set<String> visiting) {
         if (records == null || records.isEmpty()) {
             return List.of();
         }
@@ -360,13 +375,13 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
                     if (record == null || !visiting.add(record.getFileId())) {
                         return null;
                     }
-                    List<FileRecordDTO> children = buildDirectoryTree(
+                    List<DirectoryTreeDTO> children = buildDirectoryTree(
                             childrenByParent.getOrDefault(record.getFileId(), List.of()),
                             childrenByParent,
                             visiting
                     );
                     visiting.remove(record.getFileId());
-                    return toDTO(record, false, children);
+                    return toDirectoryTree(record, children);
                 })
                 .filter(Objects::nonNull)
                 .toList();
