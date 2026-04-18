@@ -211,8 +211,11 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
                 .sorted(Comparator.comparing(FileRecord::getUpdateTime, Comparator.nullsLast(Comparator.reverseOrder()))
                         .thenComparing(FileRecord::getUploadTime, Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
-        Map<String, List<FileRecord>> childrenByParent = records.stream()
-                .collect(Collectors.groupingBy(FileRecord::getParentId, LinkedHashMap::new, Collectors.toList()));
+        Map<String, List<FileRecord>> childrenByParent = new LinkedHashMap<>();
+        for (FileRecord record : records) {
+            String key = normalizeParentId(record.getParentId());
+            childrenByParent.computeIfAbsent(key, ignored -> new java.util.ArrayList<>()).add(record);
+        }
         String normalizedParentId = normalizeParentId(parentId);
         return buildDirectoryTree(childrenByParent.getOrDefault(normalizedParentId, List.of()), childrenByParent, new HashSet<>());
     }
