@@ -36,7 +36,7 @@ public class PreviewPageController {
      * @param model        模型
      * @return 模板名称
      */
-    @GetMapping("/preview/{fileId}")
+    @GetMapping("/page/{fileId}")
     public String preview(@PathVariable String fileId, @RequestParam String previewToken, Model model) {
         try {
             FilePreviewDTO dto = filePreviewUseCase.preview(fileId, previewToken);
@@ -58,7 +58,7 @@ public class PreviewPageController {
      * @param model         模型
      * @return 模板名称
      */
-    @GetMapping("/archive/preview/{archiveFileId}")
+    @GetMapping("/page/archive/{archiveFileId}")
     public String previewArchive(@PathVariable String archiveFileId,
                                  @RequestParam String innerPath,
                                  @RequestParam String previewToken,
@@ -77,7 +77,7 @@ public class PreviewPageController {
     /**
      * 预览错误页
      */
-    @GetMapping("/preview/error")
+    @GetMapping("/page/error")
     public String previewError(Model model) {
         model.addAttribute("errorMessage", "预览失败");
         return "preview/error";
@@ -86,7 +86,7 @@ public class PreviewPageController {
     /**
      * 压缩包预览错误页
      */
-    @GetMapping("/archive/preview/error")
+    @GetMapping("/page/archive/error")
     public String archivePreviewError(Model model) {
         model.addAttribute("errorMessage", "压缩包内文件预览失败");
         return "preview/error";

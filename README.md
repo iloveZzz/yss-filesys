@@ -52,7 +52,7 @@ mvn -pl yss-filesys-boot -am spring-boot:run
 - 传输任务 SSE 订阅与进度推送
 - 传输任务定时清理
 - 预览链路（预览 token、预览信息、流式访问，支持 Range）
-- 预览页面入口（`/preview/{fileId}`、`/archive/preview/{archiveFileId}`）
+- 预览页面入口（`/preview/page/{fileId}`、`/preview/page/archive/{archiveFileId}`）
 - 压缩包内文件预览（archive token + innerPath + 流式读取）
 - 类型化预览模板（image/video/audio/pdf/text/code/markdown/office/unsupported）
 - Office/PDF 仅保留 OnlyOffice 扩展口，当前不做本地渲染
