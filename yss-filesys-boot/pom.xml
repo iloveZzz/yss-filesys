@@ -19,6 +19,12 @@
             <artifactId>yss-filesys-core</artifactId>
             <version>${project.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.yss.cloud</groupId>
+            <artifactId>yss-component-dto</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.yss.filesys</groupId>
             <artifactId>yss-filesys-infra</artifactId>
