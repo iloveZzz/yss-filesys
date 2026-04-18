@@ -13,8 +13,8 @@ import com.yss.filesys.application.port.FileTransferCommandUseCase;
 import com.yss.filesys.application.port.FileTransferQueryUseCase;
 import com.yss.filesys.application.query.DownloadChunkQuery;
 import com.yss.filesys.common.AnonymousUserContext;
-import com.yss.filesys.common.MultiResult;
-import com.yss.filesys.common.SingleResult;
+import com.yss.cloud.dto.response.MultiResult;
+import com.yss.cloud.dto.response.SingleResult;
 import com.yss.filesys.domain.model.FileRecord;
 import com.yss.filesys.service.TransferSseService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -90,7 +90,7 @@ public class FileTransferController {
     @Operation(summary = "初始化上传任务")
     public SingleResult<FileTransferTaskDTO> initUpload(@Valid @RequestBody InitTransferUploadCommand command) {
         command.setUserId(AnonymousUserContext.userId());
-        return SingleResult.ok(fileTransferCommandUseCase.initUpload(command));
+        return SingleResult.of(fileTransferCommandUseCase.initUpload(command));
     }
 
     /**
@@ -102,7 +102,7 @@ public class FileTransferController {
     @PostMapping("/upload/check")
     @Operation(summary = "上传前 MD5 校验")
     public SingleResult<CheckUploadResultDTO> checkUpload(@Valid @RequestBody CheckUploadCommand command) {
-        return SingleResult.ok(fileTransferCommandUseCase.checkUpload(command));
+        return SingleResult.of(fileTransferCommandUseCase.checkUpload(command));
     }
 
     /**
@@ -126,7 +126,7 @@ public class FileTransferController {
         command.setChunkIndex(chunkIndex);
         command.setChunkMd5(chunkMd5);
         fileTransferCommandUseCase.uploadChunk(command, file.getBytes());
-        return SingleResult.ok();
+        return SingleResult.buildSuccess();
     }
 
     /**
@@ -138,7 +138,7 @@ public class FileTransferController {
     @PostMapping("/upload/merge")
     @Operation(summary = "手动触发合并")
     public SingleResult<FileRecord> merge(@Valid @RequestBody MergeChunksCommand command) {
-        return SingleResult.ok(fileTransferCommandUseCase.mergeChunks(command));
+        return SingleResult.of(fileTransferCommandUseCase.mergeChunks(command));
     }
 
     /**
@@ -151,7 +151,7 @@ public class FileTransferController {
     @Operation(summary = "初始化下载任务")
     public SingleResult<InitDownloadResultDTO> initDownload(@Valid @RequestBody InitDownloadCommand command) {
         command.setUserId(AnonymousUserContext.userId());
-        return SingleResult.ok(fileTransferCommandUseCase.initDownload(command));
+        return SingleResult.of(fileTransferCommandUseCase.initDownload(command));
     }
 
     /**
@@ -177,7 +177,7 @@ public class FileTransferController {
     @Operation(summary = "暂停传输任务")
     public SingleResult<Void> pause(@PathVariable String taskId) {
         fileTransferCommandUseCase.pause(taskId);
-        return SingleResult.ok();
+        return SingleResult.buildSuccess();
     }
 
     /**
@@ -187,7 +187,7 @@ public class FileTransferController {
     @Operation(summary = "恢复传输任务")
     public SingleResult<Void> resume(@PathVariable String taskId) {
         fileTransferCommandUseCase.resume(taskId);
-        return SingleResult.ok();
+        return SingleResult.buildSuccess();
     }
 
     /**
@@ -200,7 +200,7 @@ public class FileTransferController {
     @Operation(summary = "取消传输任务")
     public SingleResult<Void> cancel(@PathVariable String taskId) {
         fileTransferCommandUseCase.cancel(taskId);
-        return SingleResult.ok();
+        return SingleResult.buildSuccess();
     }
 
     /**
@@ -210,7 +210,7 @@ public class FileTransferController {
     @GetMapping({"", "/files"})
     @Operation(summary = "按用户查询传输任务")
     public MultiResult<FileTransferTaskDTO> listByUser(@RequestParam(required = false) Integer statusType) {
-        return MultiResult.ok(fileTransferQueryUseCase.listByUserId(AnonymousUserContext.userId(), statusType));
+        return MultiResult.of(fileTransferQueryUseCase.listByUserId(AnonymousUserContext.userId(), statusType));
     }
 
     /**
@@ -219,7 +219,7 @@ public class FileTransferController {
     @GetMapping("/stats")
     @Operation(summary = "查询传输统计")
     public SingleResult<FileTransferStatsDTO> stats() {
-        return SingleResult.ok(fileTransferQueryUseCase.getStats(AnonymousUserContext.userId()));
+        return SingleResult.of(fileTransferQueryUseCase.getStats(AnonymousUserContext.userId()));
     }
 
     /**
@@ -231,7 +231,7 @@ public class FileTransferController {
     @GetMapping("/{taskId}")
     @Operation(summary = "查询传输任务详情")
     public SingleResult<FileTransferTaskDTO> getByTaskId(@PathVariable String taskId) {
-        return SingleResult.ok(fileTransferQueryUseCase.getByTaskId(taskId));
+        return SingleResult.of(fileTransferQueryUseCase.getByTaskId(taskId));
     }
 
     /**
@@ -240,7 +240,7 @@ public class FileTransferController {
     @GetMapping("/chunks/{taskId}")
     @Operation(summary = "查询已上传分片")
     public MultiResult<Integer> getUploadedChunks(@PathVariable String taskId) {
-        return MultiResult.ok(fileTransferQueryUseCase.getUploadedChunks(taskId));
+        return MultiResult.of(fileTransferQueryUseCase.getUploadedChunks(taskId));
     }
 
     /**
@@ -249,7 +249,7 @@ public class FileTransferController {
     @GetMapping("/download/chunks/{taskId}")
     @Operation(summary = "查询已下载分片")
     public MultiResult<Integer> getDownloadedChunks(@PathVariable String taskId) {
-        return MultiResult.ok(fileTransferQueryUseCase.getDownloadedChunks(taskId));
+        return MultiResult.of(fileTransferQueryUseCase.getDownloadedChunks(taskId));
     }
 
     /**
@@ -259,6 +259,6 @@ public class FileTransferController {
     @Operation(summary = "清理已完成传输任务")
     public SingleResult<Void> clearTransfers() {
         fileTransferCommandUseCase.clearFinished(AnonymousUserContext.userId());
-        return SingleResult.ok();
+        return SingleResult.buildSuccess();
     }
 }

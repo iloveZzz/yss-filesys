@@ -3,7 +3,7 @@ package com.yss.filesys.controller;
 import com.yss.filesys.application.dto.FileHomeDTO;
 import com.yss.filesys.application.port.FileHomeUseCase;
 import com.yss.filesys.common.AnonymousUserContext;
-import com.yss.filesys.common.SingleResult;
+import com.yss.cloud.dto.response.SingleResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +37,6 @@ public class FileHomeController {
     @Operation(summary = "获取文件首页统计")
     public SingleResult<FileHomeDTO> home(@RequestParam(required = false) Integer unit,
                                           @RequestParam(required = false) Integer dateType) {
-        return SingleResult.ok(fileHomeUseCase.getHome(AnonymousUserContext.userId(), unit, dateType));
+        return SingleResult.of(fileHomeUseCase.getHome(AnonymousUserContext.userId(), unit, dateType));
     }
 }

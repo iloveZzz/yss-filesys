@@ -1,5 +1,8 @@
 package com.yss.filesys.controller;
 
+import com.yss.cloud.dto.response.MultiResult;
+import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.response.SingleResult;
 import com.yss.filesys.application.command.CreateDirectoryCommand;
 import com.yss.filesys.application.command.ClearRecycleCommand;
 import com.yss.filesys.application.command.FavoriteFilesCommand;
@@ -18,9 +21,6 @@ import com.yss.filesys.application.port.FileQueryUseCase;
 import com.yss.filesys.application.port.FileRecycleUseCase;
 import com.yss.filesys.application.query.FileSearchQuery;
 import com.yss.filesys.common.AnonymousUserContext;
-import com.yss.filesys.common.MultiResult;
-import com.yss.filesys.common.PageResult;
-import com.yss.filesys.common.SingleResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -109,7 +109,8 @@ public class FileController {
         query.setFavorite(favorite);
         query.setPageNo(pageNo);
         query.setPageSize(pageSize);
-        return PageResult.ok(fileQueryUseCase.search(query));
+        PageDTO<FileRecordDTO> result = fileQueryUseCase.search(query);
+        return PageResult.of(result.getRecords(), result.getTotal(), result.getPageSize(), result.getPageNo());
     }
 
     /**
@@ -121,7 +122,7 @@ public class FileController {
     @GetMapping("/{fileId}")
     @Operation(summary = "查询文件详情")
     public SingleResult<FileRecordDTO> getById(@PathVariable String fileId) {
-        return SingleResult.ok(fileQueryUseCase.getById(fileId));
+        return SingleResult.of(fileQueryUseCase.getById(fileId));
     }
 
     /**
@@ -134,7 +135,7 @@ public class FileController {
     @Operation(summary = "创建目录")
     public SingleResult<FileRecordDTO> createDirectory(@Valid @RequestBody CreateDirectoryCommand command) {
         command.setUserId(AnonymousUserContext.userId());
-        return SingleResult.ok(fileCommandUseCase.createDirectory(command));
+        return SingleResult.of(fileCommandUseCase.createDirectory(command));
     }
 
     /**
@@ -145,7 +146,7 @@ public class FileController {
     @GetMapping("/dirs")
     @Operation(summary = "查询目录列表")
     public MultiResult<DirectoryTreeDTO> listDirs(@RequestParam(required = false) String parentId) {
-        return MultiResult.ok(fileQueryUseCase.listDirs(AnonymousUserContext.userId(), parentId));
+        return MultiResult.of(fileQueryUseCase.listDirs(AnonymousUserContext.userId(), parentId));
     }
 
     /**
@@ -160,7 +161,7 @@ public class FileController {
     public SingleResult<Void> renameFile(@PathVariable String fileId, @Valid @RequestBody RenameFileCommand command) {
         command.setUserId(AnonymousUserContext.userId());
         fileCommandUseCase.renameFile(fileId, command);
-        return SingleResult.ok();
+        return SingleResult.buildSuccess();
     }
 
     /**
@@ -174,7 +175,7 @@ public class FileController {
     public SingleResult<Void> moveFile(@Valid @RequestBody MoveFileCommand command) {
         command.setUserId(AnonymousUserContext.userId());
         fileCommandUseCase.moveFile(command);
-        return SingleResult.ok();
+        return SingleResult.buildSuccess();
     }
 
     /**
@@ -185,7 +186,7 @@ public class FileController {
     @GetMapping("/directory/{dirId}/path")
     @Operation(summary = "获取目录层级")
     public MultiResult<FileRecordDTO> getDirectoryTreePath(@PathVariable String dirId) {
-        return MultiResult.ok(fileQueryUseCase.getDirectoryTreePath(AnonymousUserContext.userId(), dirId));
+        return MultiResult.of(fileQueryUseCase.getDirectoryTreePath(AnonymousUserContext.userId(), dirId));
     }
 
     /**
@@ -196,7 +197,7 @@ public class FileController {
     @Operation(summary = "获取文件URL")
     public SingleResult<String> getFileUrl(@PathVariable String fileId,
                                             @RequestParam(required = false) Integer expireSeconds) {
-        return SingleResult.ok(fileQueryUseCase.getFileUrl(fileId, AnonymousUserContext.userId(), expireSeconds));
+        return SingleResult.of(fileQueryUseCase.getFileUrl(fileId, AnonymousUserContext.userId(), expireSeconds));
     }
 
     /**
@@ -225,7 +226,7 @@ public class FileController {
     @Operation(summary = "批量移入回收站")
     public SingleResult<Void> moveToRecycle(@Valid @RequestBody MoveToRecycleBinCommand command) {
         fileCommandUseCase.moveToRecycleBin(command);
-        return SingleResult.ok();
+        return SingleResult.buildSuccess();
     }
 
     /**
@@ -246,7 +247,8 @@ public class FileController {
         query.setDeleted(true);
         query.setPageNo(pageNo);
         query.setPageSize(pageSize);
-        return PageResult.ok(fileQueryUseCase.search(query));
+        PageDTO<FileRecordDTO> result = fileQueryUseCase.search(query);
+        return PageResult.of(result.getRecords(), result.getTotal(), result.getPageSize(), result.getPageNo());
     }
 
     /**
@@ -260,7 +262,7 @@ public class FileController {
     public SingleResult<Void> restore(@Valid @RequestBody RestoreRecycleCommand command) {
         command.setUserId(AnonymousUserContext.userId());
         fileRecycleUseCase.restore(command);
-        return SingleResult.ok();
+        return SingleResult.buildSuccess();
     }
 
     /**
@@ -274,7 +276,7 @@ public class FileController {
     public SingleResult<Void> permanentlyDelete(@Valid @RequestBody PermanentlyDeleteRecycleCommand command) {
         command.setUserId(AnonymousUserContext.userId());
         fileRecycleUseCase.permanentlyDelete(command);
-        return SingleResult.ok();
+        return SingleResult.buildSuccess();
     }
 
     /**
@@ -288,7 +290,7 @@ public class FileController {
     public SingleResult<Void> clearRecycle(@Valid @RequestBody ClearRecycleCommand command) {
         command.setUserId(AnonymousUserContext.userId());
         fileRecycleUseCase.clearRecycle(command);
-        return SingleResult.ok();
+        return SingleResult.buildSuccess();
     }
 
     /**
@@ -302,7 +304,7 @@ public class FileController {
     public SingleResult<Void> favorite(@Valid @RequestBody FavoriteFilesCommand command) {
         command.setUserId(AnonymousUserContext.userId());
         fileFavoriteUseCase.favorite(command);
-        return SingleResult.ok();
+        return SingleResult.buildSuccess();
     }
 
     /**
@@ -316,7 +318,7 @@ public class FileController {
     public SingleResult<Void> unfavorite(@Valid @RequestBody FavoriteFilesCommand command) {
         command.setUserId(AnonymousUserContext.userId());
         fileFavoriteUseCase.unfavorite(command);
-        return SingleResult.ok();
+        return SingleResult.buildSuccess();
     }
 
     /**
@@ -326,6 +328,6 @@ public class FileController {
     @GetMapping("/favorites/count")
     @Operation(summary = "获取收藏数量")
     public SingleResult<Long> favoritesCount() {
-        return SingleResult.ok(fileFavoriteUseCase.count(AnonymousUserContext.userId()));
+        return SingleResult.of(fileFavoriteUseCase.count(AnonymousUserContext.userId()));
     }
 }

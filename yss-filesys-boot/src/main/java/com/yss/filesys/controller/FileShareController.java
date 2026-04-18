@@ -13,9 +13,9 @@ import com.yss.filesys.application.port.FileShareCommandUseCase;
 import com.yss.filesys.application.port.FileShareAccessUseCase;
 import com.yss.filesys.application.port.FileShareQueryUseCase;
 import com.yss.filesys.common.AnonymousUserContext;
-import com.yss.filesys.common.MultiResult;
-import com.yss.filesys.common.PageResult;
-import com.yss.filesys.common.SingleResult;
+import com.yss.cloud.dto.response.MultiResult;
+import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.response.SingleResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -77,7 +77,7 @@ public class FileShareController {
     @Operation(summary = "创建分享")
     public SingleResult<FileShareDTO> create(@Valid @RequestBody CreateShareCommand command) {
         command.setUserId(AnonymousUserContext.userId());
-        return SingleResult.ok(fileShareCommandUseCase.create(command));
+        return SingleResult.of(fileShareCommandUseCase.create(command));
     }
 
     /**
@@ -87,7 +87,7 @@ public class FileShareController {
     @GetMapping
     @Operation(summary = "按用户查询分享")
     public MultiResult<FileShareDTO> listByUser() {
-        return MultiResult.ok(fileShareQueryUseCase.listByUserId(AnonymousUserContext.userId()));
+        return MultiResult.of(fileShareQueryUseCase.listByUserId(AnonymousUserContext.userId()));
     }
 
     /**
@@ -97,7 +97,8 @@ public class FileShareController {
     @Operation(summary = "分页查询分享")
     public PageResult<FileShareDTO> pageByUser(@RequestParam(defaultValue = "1") long pageNo,
                                                @RequestParam(defaultValue = "20") long pageSize) {
-        return PageResult.ok(fileShareQueryUseCase.pageByUserId(AnonymousUserContext.userId(), pageNo, pageSize));
+        com.yss.filesys.application.dto.PageDTO<FileShareDTO> result = fileShareQueryUseCase.pageByUserId(AnonymousUserContext.userId(), pageNo, pageSize);
+        return PageResult.of(result.getRecords(), result.getTotal(), Math.toIntExact(result.getPageSize()), Math.toIntExact(result.getPageNo()));
     }
 
     /**
@@ -109,7 +110,7 @@ public class FileShareController {
     @GetMapping("/{shareId}")
     @Operation(summary = "查询分享详情")
     public SingleResult<FileShareDTO> getById(@PathVariable String shareId) {
-        return SingleResult.ok(fileShareQueryUseCase.getById(shareId));
+        return SingleResult.of(fileShareQueryUseCase.getById(shareId));
     }
 
     /**
@@ -121,7 +122,7 @@ public class FileShareController {
     @GetMapping("/{shareId}/info")
     @Operation(summary = "获取分享页信息")
     public SingleResult<FileShareThinDTO> getShareInfo(@PathVariable String shareId) {
-        return SingleResult.ok(fileShareQueryUseCase.getShareInfo(shareId));
+        return SingleResult.of(fileShareQueryUseCase.getShareInfo(shareId));
     }
 
     /**
@@ -135,7 +136,7 @@ public class FileShareController {
     @Operation(summary = "验证分享提取码")
     public SingleResult<Boolean> verifyShareCode(@PathVariable String shareId, @Valid @RequestBody VerifyShareCodeCommand command) {
         command.setShareId(shareId);
-        return SingleResult.ok(fileShareQueryUseCase.verifyShareCode(command.getShareId(), command.getShareCode()));
+        return SingleResult.of(fileShareQueryUseCase.verifyShareCode(command.getShareId(), command.getShareCode()));
     }
 
     /**
@@ -149,7 +150,7 @@ public class FileShareController {
     @Operation(summary = "获取分享文件列表")
     public MultiResult<FileRecordDTO> listShareFiles(@PathVariable String shareId,
                                                      @RequestParam(required = false) String shareCode) {
-        return MultiResult.ok(fileShareQueryUseCase.listShareFiles(shareId, shareCode));
+        return MultiResult.of(fileShareQueryUseCase.listShareFiles(shareId, shareCode));
     }
 
     /**
@@ -184,7 +185,7 @@ public class FileShareController {
     @Operation(summary = "批量取消分享")
     public SingleResult<Void> cancel(@RequestBody List<String> shareIds) {
         fileShareCommandUseCase.cancelByIds(shareIds);
-        return SingleResult.ok();
+        return SingleResult.buildSuccess();
     }
 
     /**
@@ -194,7 +195,7 @@ public class FileShareController {
     @Operation(summary = "清空当前用户所有分享")
     public SingleResult<Void> clearAll() {
         fileShareCommandUseCase.clearAll(AnonymousUserContext.userId());
-        return SingleResult.ok();
+        return SingleResult.buildSuccess();
     }
 
     /**
@@ -209,7 +210,7 @@ public class FileShareController {
     public SingleResult<Void> recordAccess(@PathVariable String shareId, @RequestBody CreateShareAccessRecordCommand command) {
         command.setShareId(shareId);
         fileShareAccessUseCase.record(command);
-        return SingleResult.ok();
+        return SingleResult.buildSuccess();
     }
 
     /**
@@ -221,6 +222,6 @@ public class FileShareController {
     @GetMapping("/{shareId}/access-records")
     @Operation(summary = "查询分享访问记录")
     public MultiResult<FileShareAccessRecordDTO> listAccessRecords(@PathVariable String shareId) {
-        return MultiResult.ok(fileShareAccessUseCase.listByShareId(shareId));
+        return MultiResult.of(fileShareAccessUseCase.listByShareId(shareId));
     }
 }

@@ -6,8 +6,8 @@ import com.yss.filesys.application.dto.PageDTO;
 import com.yss.filesys.application.dto.SubscriptionPlanDTO;
 import com.yss.filesys.application.impl.SubscriptionPlanAppService;
 import com.yss.filesys.application.query.SubscriptionPlanPageQuery;
-import com.yss.filesys.common.PageResult;
-import com.yss.filesys.common.SingleResult;
+import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.response.SingleResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -51,7 +51,8 @@ public class SubscriptionPlanController {
     @GetMapping("/pages")
     @Operation(summary = "分页获取套餐列表")
     public PageResult<SubscriptionPlanDTO> getPages(SubscriptionPlanPageQuery query) {
-        return PageResult.ok(subscriptionPlanAppService.page(query));
+        com.yss.filesys.application.dto.PageDTO<SubscriptionPlanDTO> result = subscriptionPlanAppService.page(query);
+        return PageResult.of(result.getRecords(), result.getTotal(), result.getPageSize(), result.getPageNo());
     }
 
     /**
@@ -63,7 +64,7 @@ public class SubscriptionPlanController {
     @GetMapping("/info/{id}")
     @Operation(summary = "获取套餐详细信息")
     public SingleResult<SubscriptionPlanDTO> getDetail(@PathVariable Long id) {
-        return SingleResult.ok(subscriptionPlanAppService.detail(id));
+        return SingleResult.of(subscriptionPlanAppService.detail(id));
     }
 
     /**
@@ -76,7 +77,7 @@ public class SubscriptionPlanController {
     @Operation(summary = "添加套餐")
     public SingleResult<Void> add(@Valid @RequestBody SubscriptionPlanAddCommand command) {
         subscriptionPlanAppService.add(command);
-        return SingleResult.ok();
+        return SingleResult.buildSuccess();
     }
 
     /**
@@ -89,7 +90,7 @@ public class SubscriptionPlanController {
     @Operation(summary = "编辑套餐")
     public SingleResult<Void> edit(@Valid @RequestBody SubscriptionPlanEditCommand command) {
         subscriptionPlanAppService.edit(command);
-        return SingleResult.ok();
+        return SingleResult.buildSuccess();
     }
 
     /**
@@ -102,6 +103,6 @@ public class SubscriptionPlanController {
     @Operation(summary = "根据ID删除套餐")
     public SingleResult<Void> delete(@PathVariable Long id) {
         subscriptionPlanAppService.delete(id);
-        return SingleResult.ok();
+        return SingleResult.buildSuccess();
     }
 }
