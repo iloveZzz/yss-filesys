@@ -93,7 +93,7 @@ public class TransferSseServiceImpl implements TransferSseService {
         for (SseEmitter emitter : userEmitters) {
             try {
                 emitter.send(SseEmitter.event().name(eventName).data(payload));
-            } catch (IOException e) {
+            } catch (Exception e) {
                 removeEmitter(userId, emitter);
             }
         }
@@ -103,7 +103,7 @@ public class TransferSseServiceImpl implements TransferSseService {
         ScheduledFuture<?> future = heartbeatExecutor.scheduleAtFixedRate(() -> {
             try {
                 emitter.send(SseEmitter.event().comment("heartbeat"));
-            } catch (IOException e) {
+            } catch (Exception e) {
                 log.debug("SSE heartbeat failed, removing emitter: userId={}", userId, e);
                 removeEmitter(userId, emitter);
             }
@@ -125,7 +125,7 @@ public class TransferSseServiceImpl implements TransferSseService {
             }
             try {
                 emitter.send(SseEmitter.event().name("complete").data(cachedEvent.payload()));
-            } catch (IOException e) {
+            } catch (Exception e) {
                 removeEmitter(userId, emitter);
                 return;
             }

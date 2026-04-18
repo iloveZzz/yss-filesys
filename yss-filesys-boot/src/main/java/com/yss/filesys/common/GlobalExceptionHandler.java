@@ -7,6 +7,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 
 @Slf4j
 @RestControllerAdvice
@@ -29,6 +30,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<SingleResult<Void>> handleMaxUpload(MaxUploadSizeExceededException ex) {
         return ResponseEntity.status(413)
                 .body(SingleResult.fail("上传文件过大，请拆分为更小的分片后重试"));
+    }
+
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    public void handleAsyncRequestNotUsable(AsyncRequestNotUsableException ex) {
+        log.debug("Ignored async request error: {}", ex.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
