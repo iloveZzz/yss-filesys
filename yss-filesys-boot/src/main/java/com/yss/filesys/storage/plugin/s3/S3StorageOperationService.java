@@ -6,7 +6,6 @@ import com.yss.filesys.storage.plugin.core.AbstractStorageOperationService;
 import com.yss.filesys.storage.plugin.core.annotation.StoragePlugin;
 import com.yss.filesys.storage.plugin.core.config.StorageConfig;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -73,7 +72,6 @@ public class S3StorageOperationService extends AbstractStorageOperationService {
     private S3Client s3Client;
     private S3Presigner s3Presigner;
 
-    @Autowired
     public S3StorageOperationService() {
         super();
     }
