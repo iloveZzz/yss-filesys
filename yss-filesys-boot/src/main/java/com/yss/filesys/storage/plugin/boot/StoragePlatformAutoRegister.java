@@ -1,6 +1,7 @@
 package com.yss.filesys.storage.plugin.boot;
 
 import com.yss.filesys.domain.model.StoragePlatform;
+import com.yss.filesys.application.form.StorageFormTemplateRegistry;
 import com.yss.filesys.storage.plugin.core.dto.StoragePluginMetadata;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,11 +20,13 @@ public class StoragePlatformAutoRegister implements ApplicationRunner {
 
     private final StoragePluginRegistry storagePluginRegistry;
     private final com.yss.filesys.domain.gateway.StoragePlatformGateway storagePlatformGateway;
+    private final StorageFormTemplateRegistry storageFormTemplateRegistry;
 
     @Override
     public void run(ApplicationArguments args) {
         try {
             storagePluginRegistry.initialize();
+            storageFormTemplateRegistry.initialize();
             syncPluginsToDatabase();
         } catch (DataAccessException e) {
             log.warn("数据库不可用，跳过插件同步: {}", e.getMessage());
@@ -45,7 +48,7 @@ public class StoragePlatformAutoRegister implements ApplicationRunner {
             StoragePlatform platform = StoragePlatform.builder()
                     .identifier(metadata.getIdentifier())
                     .name(metadata.getName())
-                    .configSchema(validateSchema(metadata.getConfigSchema()))
+                    .configSchema(validateSchema(resolveSchema(metadata)))
                     .icon(metadata.getIcon())
                     .link(metadata.getLink())
                     .description(metadata.getDescription())
@@ -57,7 +60,7 @@ public class StoragePlatformAutoRegister implements ApplicationRunner {
         if (needsUpdate(existing, metadata)) {
             storagePlatformGateway.save(existing.toBuilder()
                     .name(metadata.getName())
-                    .configSchema(validateSchema(metadata.getConfigSchema()))
+                    .configSchema(validateSchema(resolveSchema(metadata)))
                     .icon(metadata.getIcon())
                     .link(metadata.getLink())
                     .description(metadata.getDescription())
@@ -67,10 +70,15 @@ public class StoragePlatformAutoRegister implements ApplicationRunner {
 
     private boolean needsUpdate(StoragePlatform existing, StoragePluginMetadata metadata) {
         return !Objects.equals(existing.getName(), metadata.getName())
-                || !Objects.equals(existing.getConfigSchema(), validateSchema(metadata.getConfigSchema()))
+                || !Objects.equals(existing.getConfigSchema(), validateSchema(resolveSchema(metadata)))
                 || !Objects.equals(existing.getIcon(), metadata.getIcon())
                 || !Objects.equals(existing.getLink(), metadata.getLink())
                 || !Objects.equals(existing.getDescription(), metadata.getDescription());
+    }
+
+    private String resolveSchema(StoragePluginMetadata metadata) {
+        return storageFormTemplateRegistry.getSchemaJson(metadata.getIdentifier())
+                .orElse(metadata.getConfigSchema());
     }
 
     private String validateSchema(String schema) {

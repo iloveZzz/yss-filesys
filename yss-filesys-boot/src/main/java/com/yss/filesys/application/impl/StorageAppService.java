@@ -15,6 +15,7 @@ import com.yss.filesys.domain.model.BizException;
 import com.yss.filesys.domain.model.StoragePlatform;
 import com.yss.filesys.domain.model.StorageSetting;
 import com.yss.filesys.storage.plugin.boot.StorageServiceFacade;
+import com.yss.filesys.application.form.StorageFormTemplateRegistry;
 import com.yss.filesys.storage.plugin.core.IStorageOperationService;
 import com.yss.filesys.storage.plugin.core.config.StorageUtils;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ public class StorageAppService implements StorageCommandUseCase, StorageQueryUse
     private final StoragePlatformGateway storagePlatformGateway;
     private final StorageSettingGateway storageSettingGateway;
     private final StorageServiceFacade storageServiceFacade;
+    private final StorageFormTemplateRegistry storageFormTemplateRegistry;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -131,7 +133,8 @@ public class StorageAppService implements StorageCommandUseCase, StorageQueryUse
                 .id(platform.getId())
                 .name(platform.getName())
                 .identifier(platform.getIdentifier())
-                .configSchema(platform.getConfigSchema())
+                .configSchema(storageFormTemplateRegistry.getSchemaJson(platform.getIdentifier())
+                        .orElse(platform.getConfigSchema()))
                 .icon(platform.getIcon())
                 .link(platform.getLink())
                 .isDefault(platform.getIsDefault())
