@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
  * </p>
  */
 @RestController
-@RequestMapping("/api/preview")
+@RequestMapping("/preview")
 @Tag(name = "文件预览")
 public class FilePreviewController {
 

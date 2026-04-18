@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
  * </p>
  */
 @RestController
-@RequestMapping("/api/files/home")
+@RequestMapping("/files/home")
 @Tag(name = "文件首页")
 @RequiredArgsConstructor
 public class FileHomeController {

@@ -255,7 +255,7 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
         if (record.getObjectKey() == null || record.getObjectKey().isBlank()) {
             throw new BizException("文件不存在或未上传完成");
         }
-        StringBuilder url = new StringBuilder("/api/files/download/").append(fileId);
+        StringBuilder url = new StringBuilder("/files/download/").append(fileId);
         if (expireSeconds != null && expireSeconds > 0) {
             url.append("&expireSeconds=").append(expireSeconds);
         }

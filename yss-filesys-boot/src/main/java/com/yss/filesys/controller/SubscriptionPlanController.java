@@ -28,7 +28,7 @@ import org.springframework.validation.annotation.Validated;
  * </p>
  */
 @RestController
-@RequestMapping("/api/plans")
+@RequestMapping("/plans")
 @Tag(name = "套餐管理")
 @Validated
 public class SubscriptionPlanController {

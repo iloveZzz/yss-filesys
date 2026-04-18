@@ -44,7 +44,7 @@ import java.util.Set;
  * </p>
  */
 @RestController
-@RequestMapping("/api/transfers")
+@RequestMapping("/transfers")
 @Tag(name = "文件传输")
 public class FileTransferController {
 

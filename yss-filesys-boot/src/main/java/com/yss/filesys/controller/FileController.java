@@ -46,7 +46,7 @@ import java.nio.charset.StandardCharsets;
  * </p>
  */
 @RestController
-@RequestMapping("/api/files")
+@RequestMapping("/files")
 @Tag(name = "文件管理")
 public class FileController {
 

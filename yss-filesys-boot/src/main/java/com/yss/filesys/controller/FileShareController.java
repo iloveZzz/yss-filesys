@@ -42,7 +42,7 @@ import java.util.List;
  * </p>
  */
 @RestController
-@RequestMapping("/api/shares")
+@RequestMapping("/shares")
 @Tag(name = "文件分享")
 public class FileShareController {
 

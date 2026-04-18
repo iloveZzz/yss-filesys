@@ -46,7 +46,7 @@ public class FilePreviewAppService implements FilePreviewUseCase {
                 .fileName(fileRecord.getDisplayName())
                 .mimeType(fileRecord.getMimeType())
                 .previewType(previewType)
-                .streamUrl("/api/files/stream/" + fileRecord.getFileId() + "?previewToken=" + token)
+                .streamUrl("/files/stream/" + fileRecord.getFileId() + "?previewToken=" + token)
                 .fileSize(fileRecord.getSize())
                 .build();
     }
@@ -83,7 +83,7 @@ public class FilePreviewAppService implements FilePreviewUseCase {
                 .fileName(fileName)
                 .mimeType(null)
                 .previewType(previewType)
-                .streamUrl("/api/files/archive/stream/" + archive.getFileId() + "?innerPath=" + encodedInnerPath + "&previewToken=" + token)
+                .streamUrl("/files/archive/stream/" + archive.getFileId() + "?innerPath=" + encodedInnerPath + "&previewToken=" + token)
                 .fileSize(null)
                 .build();
     }

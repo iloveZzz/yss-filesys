@@ -64,7 +64,7 @@
                 </td>
                 <td th:text="${file.size != null ? file.size + ' B' : '-'}">-</td>
                 <td>
-                    <a class="btn secondary" th:href="@{/api/shares/{shareId}/download/{fileId}(shareId=${shareInfo.shareId}, fileId=${file.fileId}, shareCode=${shareCode})}">
+                    <a class="btn secondary" th:href="@{/shares/{shareId}/download/{fileId}(shareId=${shareInfo.shareId}, fileId=${file.fileId}, shareCode=${shareCode})}">
                         下载
                     </a>
                 </td>

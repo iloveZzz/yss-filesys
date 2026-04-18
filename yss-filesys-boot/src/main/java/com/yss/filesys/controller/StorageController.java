@@ -32,7 +32,7 @@ import java.util.List;
  * </p>
  */
 @RestController
-@RequestMapping("/api/storage")
+@RequestMapping("/storage")
 @Tag(name = "存储平台配置")
 public class StorageController {
 

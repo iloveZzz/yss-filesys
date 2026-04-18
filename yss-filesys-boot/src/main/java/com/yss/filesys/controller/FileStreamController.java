@@ -34,7 +34,7 @@ import java.util.zip.ZipFile;
  * </p>
  */
 @RestController
-@RequestMapping("/api/files")
+@RequestMapping("/files")
 public class FileStreamController {
 
     /**
