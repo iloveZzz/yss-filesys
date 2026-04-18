@@ -33,7 +33,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -289,13 +289,13 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
                 .taskType(TransferTaskType.download)
                 .uploadedChunks(0)
                 .uploadedSize(0L)
-                .status(TransferTaskStatus.downloading)
+                .status(TransferTaskStatus.initialized)
                 .startTime(now)
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
         fileTransferTaskGateway.save(task);
-        transferSseService.sendStatus(task.getUserId(), task.getTaskId(), TransferTaskStatus.downloading.name(), "开始下载");
+        transferSseService.sendStatus(task.getUserId(), task.getTaskId(), TransferTaskStatus.initialized.name(), "任务已初始化");
         return InitDownloadResultDTO.builder()
                 .taskId(taskId)
                 .fileId(fileRecord.getFileId())
@@ -311,6 +311,8 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
     public void cancel(String taskId) {
         FileTransferTask task = fileTransferTaskGateway.findByTaskId(taskId).orElseThrow(() -> new BizException("传输任务不存在: " + taskId));
         fileTransferTaskGateway.updateStatus(taskId, TransferTaskStatus.canceled, null);
+        deleteChunkDir(taskId);
+        deleteDownloadChunkDir(taskId);
         transferSseService.sendStatus(task.getUserId(), taskId, TransferTaskStatus.canceled.name(), "任务已取消");
     }
 
@@ -359,6 +361,22 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
         if (task.getTaskType() != TransferTaskType.download) {
             throw new BizException("任务不是下载任务");
         }
+        if (task.getStatus() == TransferTaskStatus.canceled
+                || task.getStatus() == TransferTaskStatus.completed
+                || task.getStatus() == TransferTaskStatus.failed) {
+            throw new BizException("任务状态不支持下载分片: " + task.getStatus());
+        }
+        if (task.getStatus() == TransferTaskStatus.initialized) {
+            task = fileTransferTaskGateway.save(task.toBuilder()
+                    .status(TransferTaskStatus.downloading)
+                    .updatedAt(LocalDateTime.now())
+                    .build());
+            transferSseService.sendStatus(task.getUserId(), task.getTaskId(), TransferTaskStatus.downloading.name(), "开始下载");
+        } else if (task.getStatus() == TransferTaskStatus.paused) {
+            throw new BizException("任务已暂停，请先恢复后再下载");
+        } else if (task.getStatus() != TransferTaskStatus.downloading) {
+            throw new BizException("任务状态不支持下载分片: " + task.getStatus());
+        }
         IStorageOperationService storageService = storageServiceFacade.getStorageService(task.getStorageSettingId());
         if (!storageService.isFileExist(task.getObjectKey())) {
             throw new BizException("文件不存在");
@@ -373,17 +391,20 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
             try (InputStream in = storageService.downloadFileRange(task.getObjectKey(), start, end - 1)) {
                 chunk = in.readAllBytes();
             }
-            int progressed = Math.max(task.getUploadedChunks() == null ? 0 : task.getUploadedChunks(), query.getChunkIndex() + 1);
+            Set<Integer> downloadedChunks = recordDownloadedChunk(task.getTaskId(), query.getChunkIndex());
+            int progressed = downloadedChunks.size();
+            long downloadedSize = calcDownloadedSize(task, downloadedChunks);
             TransferTaskStatus status = progressed >= task.getTotalChunks() ? TransferTaskStatus.completed : TransferTaskStatus.downloading;
             fileTransferTaskGateway.save(task.toBuilder()
                     .uploadedChunks(progressed)
-                    .uploadedSize(Math.min(task.getFileSize(), (long) progressed * task.getChunkSize()))
+                    .uploadedSize(downloadedSize)
                     .status(status)
                     .completeTime(status == TransferTaskStatus.completed ? LocalDateTime.now() : null)
                     .updatedAt(LocalDateTime.now())
                     .build());
-            transferSseService.sendProgress(task.getUserId(), task.getTaskId(), Math.min(task.getFileSize(), (long) progressed * task.getChunkSize()), task.getFileSize(), progressed, task.getTotalChunks());
+            transferSseService.sendProgress(task.getUserId(), task.getTaskId(), downloadedSize, task.getFileSize(), progressed, task.getTotalChunks());
             if (status == TransferTaskStatus.completed) {
+                deleteDownloadChunkDir(task.getTaskId());
                 transferSseService.sendComplete(task.getUserId(), task.getTaskId(), "下载完成");
             }
             return chunk;
@@ -411,12 +432,7 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
         if (task.getTaskType() != TransferTaskType.download) {
             throw new BizException("任务不是下载任务");
         }
-        int count = task.getUploadedChunks() == null ? 0 : task.getUploadedChunks();
-        List<Integer> chunks = new ArrayList<>();
-        for (int i = 0; i < count; i++) {
-            chunks.add(i);
-        }
-        return chunks;
+        return existingChunkIndexes(downloadChunkDir(taskId));
     }
 
     @Override
@@ -424,7 +440,7 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
     public void clearFinished(String userId) {
         userId = resolveUserId(userId);
         List<FileTransferTask> tasks = fileTransferTaskGateway.listByUserId(userId).stream()
-                .filter(this::isFinished)
+                .filter(task -> task.getStatus() == TransferTaskStatus.completed)
                 .toList();
         if (tasks.isEmpty()) {
             return;
@@ -432,6 +448,7 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
         fileTransferTaskGateway.deleteByTaskIds(tasks.stream().map(FileTransferTask::getTaskId).toList());
         for (FileTransferTask task : tasks) {
             deleteChunkDir(task.getTaskId());
+            deleteDownloadChunkDir(task.getTaskId());
         }
     }
 
@@ -475,8 +492,28 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
         return Path.of(storageRoot, "chunks", taskId);
     }
 
+    private Path downloadChunkDir(String taskId) {
+        return Path.of(storageRoot, "download", "chunks", taskId);
+    }
+
     private void deleteChunkDir(String taskId) {
         Path dir = chunkDir(taskId);
+        if (!Files.exists(dir)) {
+            return;
+        }
+        try (var stream = Files.walk(dir)) {
+            stream.sorted((a, b) -> b.compareTo(a)).forEach(path -> {
+                try {
+                    Files.deleteIfExists(path);
+                } catch (IOException ignored) {
+                }
+            });
+        } catch (IOException ignored) {
+        }
+    }
+
+    private void deleteDownloadChunkDir(String taskId) {
+        Path dir = downloadChunkDir(taskId);
         if (!Files.exists(dir)) {
             return;
         }
@@ -504,6 +541,36 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
         } catch (IOException e) {
             throw new BizException("读取分片列表失败: " + e.getMessage());
         }
+    }
+
+    private Set<Integer> recordDownloadedChunk(String taskId, int chunkIndex) throws IOException {
+        Path dir = downloadChunkDir(taskId);
+        Files.createDirectories(dir);
+        Path marker = dir.resolve(chunkIndex + ".part");
+        if (!Files.exists(marker)) {
+            Files.createFile(marker);
+        }
+        return new HashSet<>(existingChunkIndexes(dir));
+    }
+
+    private long calcDownloadedSize(FileTransferTask task, Set<Integer> downloadedChunks) {
+        long total = 0L;
+        for (Integer chunkIndex : downloadedChunks) {
+            total += chunkSize(task, chunkIndex);
+        }
+        return Math.min(total, task.getFileSize() == null ? total : task.getFileSize());
+    }
+
+    private long chunkSize(FileTransferTask task, int chunkIndex) {
+        if (task.getFileSize() == null || task.getFileSize() <= 0) {
+            return 0L;
+        }
+        long chunkSize = task.getChunkSize() == null || task.getChunkSize() <= 0 ? task.getFileSize() : task.getChunkSize();
+        long start = (long) chunkIndex * chunkSize;
+        if (start >= task.getFileSize()) {
+            return 0L;
+        }
+        return Math.min(chunkSize, task.getFileSize() - start);
     }
 
     private boolean matchStatusType(FileTransferTask task, Integer statusType) {
