@@ -167,6 +167,9 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
     @Override
     public PageDTO<FileRecordDTO> search(FileSearchQuery query) {
         query.setUserId(resolveUserId(query.getUserId()));
+        if (query.getDeleted() == null) {
+            query.setDeleted(false);
+        }
         if (Boolean.TRUE.equals(query.getIsRecents())) {
             query.setDeleted(false);
             query.setIsDir(false);
