@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Value;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 文件记录DTO
@@ -66,4 +67,9 @@ public class FileRecordDTO {
      * 更新时间
      */
     LocalDateTime updateTime;
+    /**
+     * 子目录节点
+     */
+    @Builder.Default
+    List<FileRecordDTO> children = List.of();
 }

@@ -34,11 +34,15 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -202,10 +206,15 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
     @Override
     public List<FileRecordDTO> listDirs(String userId, String parentId) {
         userId = resolveUserId(userId);
-        return fileRecordGateway.listByUserAndParentAndDeleted(userId, parentId, false).stream()
+        List<FileRecord> records = fileRecordGateway.listByUserAndDeleted(userId, false).stream()
                 .filter(record -> Boolean.TRUE.equals(record.getIsDir()))
-                .map(record -> toDTO(record, false))
+                .sorted(Comparator.comparing(FileRecord::getUpdateTime, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(FileRecord::getUploadTime, Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
+        Map<String, List<FileRecord>> childrenByParent = records.stream()
+                .collect(Collectors.groupingBy(FileRecord::getParentId, LinkedHashMap::new, Collectors.toList()));
+        String normalizedParentId = normalizeParentId(parentId);
+        return buildDirectoryTree(childrenByParent.getOrDefault(normalizedParentId, List.of()), childrenByParent, new HashSet<>());
     }
 
     @Override
@@ -315,6 +324,10 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
     }
 
     private FileRecordDTO toDTO(FileRecord record, boolean favorite) {
+        return toDTO(record, favorite, List.of());
+    }
+
+    private FileRecordDTO toDTO(FileRecord record, boolean favorite, List<FileRecordDTO> children) {
         return FileRecordDTO.builder()
                 .fileId(record.getFileId())
                 .originalName(record.getOriginalName())
@@ -329,7 +342,35 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
                 .isFavorite(favorite)
                 .uploadTime(record.getUploadTime())
                 .updateTime(record.getUpdateTime())
+                .children(children == null ? List.of() : children)
                 .build();
+    }
+
+    private List<FileRecordDTO> buildDirectoryTree(List<FileRecord> records,
+                                                   Map<String, List<FileRecord>> childrenByParent,
+                                                   Set<String> visiting) {
+        if (records == null || records.isEmpty()) {
+            return List.of();
+        }
+        return records.stream()
+                .map(record -> {
+                    if (record == null || !visiting.add(record.getFileId())) {
+                        return null;
+                    }
+                    List<FileRecordDTO> children = buildDirectoryTree(
+                            childrenByParent.getOrDefault(record.getFileId(), List.of()),
+                            childrenByParent,
+                            visiting
+                    );
+                    visiting.remove(record.getFileId());
+                    return toDTO(record, false, children);
+                })
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private String normalizeParentId(String parentId) {
+        return parentId == null || parentId.isBlank() ? null : parentId;
     }
 
     private FileRecord loadOwnedFile(String fileId, String userId) {
