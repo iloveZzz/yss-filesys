@@ -35,10 +35,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.net.URLEncoder;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 /**
  * 文件管理控制器
  * <p>
@@ -121,7 +125,7 @@ public class FileController {
      */
     @GetMapping("/{fileId}")
     @Operation(summary = "查询文件详情")
-    public SingleResult<FileRecordDTO> getById(@PathVariable String fileId) {
+    public SingleResult<FileRecordDTO> getFileById(@PathVariable String fileId) {
         return SingleResult.of(fileQueryUseCase.getById(fileId));
     }
 
@@ -206,14 +210,38 @@ public class FileController {
      */
     @GetMapping("/download/{fileId}")
     @Operation(summary = "下载文件")
-    public ResponseEntity<byte[]> downloadFile(@PathVariable String fileId) {
+    public void downloadFile(@PathVariable String fileId, HttpServletResponse response) throws IOException {
         FileDownloadDTO download = fileQueryUseCase.downloadFile(fileId, AnonymousUserContext.userId());
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + URLEncoder.encode(download.getFileName(), StandardCharsets.UTF_8) + "\"")
-                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
-                .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(download.getContent().length))
-                .body(download.getContent());
+        writeAttachmentHeaders(response, download.getFileName(), MediaType.APPLICATION_OCTET_STREAM_VALUE);
+        response.setContentLength(download.getContent().length);
+        response.getOutputStream().write(download.getContent());
+        response.flushBuffer();
+    }
+
+    /**
+     * 批量下载文件(打包为zip)
+     * @param fileIds 文件ID列表
+     * @return zip压缩文件内容
+     */
+    @PostMapping("/download/batch")
+    @Operation(summary = "批量下载文件")
+    public void downloadFilesBatch(@RequestBody List<String> fileIds, HttpServletResponse response) throws IOException {
+        List<FileDownloadDTO> downloads = fileQueryUseCase.downloadFiles(fileIds, AnonymousUserContext.userId());
+        String zipFileName = buildZipFileName(downloads);
+        writeAttachmentHeaders(response, zipFileName, "application/zip");
+        try (ZipOutputStream zos = new ZipOutputStream(response.getOutputStream())) {
+            java.util.Map<String, Integer> fileNameCount = new java.util.HashMap<>();
+            for (FileDownloadDTO download : downloads) {
+                String entryName = uniqueZipEntryName(download.getFileName(), fileNameCount);
+                zos.putNextEntry(new ZipEntry(entryName));
+                zos.write(download.getContent());
+                zos.closeEntry();
+            }
+            zos.finish();
+            response.flushBuffer();
+        } catch (Exception e) {
+            throw new IOException("批量下载失败: " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -229,6 +257,41 @@ public class FileController {
         return SingleResult.buildSuccess();
     }
 
+    private void writeAttachmentHeaders(HttpServletResponse response, String fileName, String contentType) {
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION,
+                "attachment; filename=\"" + URLEncoder.encode(fileName, StandardCharsets.UTF_8) + "\"");
+        response.setContentType(contentType);
+    }
+
+    private String buildZipFileName(List<FileDownloadDTO> downloads) {
+        if (downloads == null || downloads.isEmpty()) {
+            return "files.zip";
+        }
+        String firstName = downloads.get(0).getFileName();
+        String nameWithoutExt = firstName;
+        int lastDotIndex = firstName.lastIndexOf(".");
+        if (lastDotIndex > 0) {
+            nameWithoutExt = firstName.substring(0, lastDotIndex);
+        }
+        return nameWithoutExt + "等.zip";
+    }
+
+    private String uniqueZipEntryName(String fileName, java.util.Map<String, Integer> fileNameCount) {
+        int count = fileNameCount.getOrDefault(fileName, 0);
+        fileNameCount.put(fileName, count + 1);
+        if (count <= 0) {
+            return fileName;
+        }
+        String nameWithoutExt = fileName;
+        String ext = "";
+        int lastDotIndex = fileName.lastIndexOf(".");
+        if (lastDotIndex > 0) {
+            nameWithoutExt = fileName.substring(0, lastDotIndex);
+            ext = fileName.substring(lastDotIndex);
+        }
+        return nameWithoutExt + "_" + count + ext;
+    }
+
     /**
      * 分页查询回收站文件
      * @param keyword  搜索关键词
@@ -238,7 +301,7 @@ public class FileController {
      */
     @GetMapping("/recycle")
     @Operation(summary = "分页查询回收站文件")
-    public PageResult<FileRecordDTO> recycle(@RequestParam(required = false) String keyword,
+    public PageResult<FileRecordDTO> listRecycleFiles(@RequestParam(required = false) String keyword,
                                              @RequestParam(defaultValue = "1") long pageNo,
                                              @RequestParam(defaultValue = "20") long pageSize) {
         FileSearchQuery query = new FileSearchQuery();
@@ -282,12 +345,12 @@ public class FileController {
     /**
      * 清空回收站
      *
-     * @param command 清空回收站命令
      * @return 操作结果
      */
     @DeleteMapping("/recycle/clear")
     @Operation(summary = "清空回收站")
-    public SingleResult<Void> clearRecycle(@Valid @RequestBody ClearRecycleCommand command) {
+    public SingleResult<Void> clearRecycle() {
+        ClearRecycleCommand command = new ClearRecycleCommand();
         command.setUserId(AnonymousUserContext.userId());
         fileRecycleUseCase.clearRecycle(command);
         return SingleResult.buildSuccess();
@@ -313,7 +376,7 @@ public class FileController {
      * @param command 取消收藏命令
      * @return 操作结果
      */
-    @DeleteMapping("/favorites")
+    @PostMapping("/unfavorite")
     @Operation(summary = "取消收藏文件")
     public SingleResult<Void> unfavorite(@Valid @RequestBody FavoriteFilesCommand command) {
         command.setUserId(AnonymousUserContext.userId());
