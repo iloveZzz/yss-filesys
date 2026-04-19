@@ -18,13 +18,6 @@
 - springdoc-openapi
 - Actuator
 
-## 与 free-fs 的迁移映射
-
-- `fs-modules/fs-file` -> `core.domain.model.FileRecord` + `boot.controller.FileController`
-- `fs-modules/fs-storage` -> `core.domain.model.StoragePlatform/StorageSetting` + `boot.controller.StorageController`
-- `fs-modules/fs-file`（分享/传输）-> `core.domain.model.FileShareRecord/FileTransferTask` + `boot.controller.FileShareController/FileTransferController`
-- `fs-modules/* mapper` -> `infra.repository.mapper/*`
-- `service impl 直接持久化` -> `boot.appService -> core.gateway -> infra.gatewayImpl`
 
 ## 启动
 
