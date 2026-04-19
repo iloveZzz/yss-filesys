@@ -10,11 +10,14 @@ import com.yss.filesys.feignsdk.dto.YssFilesysInitUploadRequest;
 import com.yss.filesys.feignsdk.dto.YssFilesysMergeChunksRequest;
 import com.yss.filesys.feignsdk.dto.YssFilesysTransferTaskDTO;
 import com.yss.filesys.feignsdk.exception.YssFilesysFeignSdkException;
+import com.yss.filesys.feignsdk.properties.YssFilesysFeignSdkProperties;
 import com.yss.filesys.feignsdk.support.ByteArrayMultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 /**
@@ -24,9 +27,12 @@ import java.util.List;
 public class YssFilesysTransferSdkService {
 
     private final YssFilesysTransferFeignClient feignClient;
+    private final YssFilesysFeignSdkProperties properties;
 
-    public YssFilesysTransferSdkService(YssFilesysTransferFeignClient feignClient) {
+    public YssFilesysTransferSdkService(YssFilesysTransferFeignClient feignClient,
+                                        YssFilesysFeignSdkProperties properties) {
         this.feignClient = feignClient;
+        this.properties = properties;
     }
 
     public YssFilesysTransferTaskDTO initUpload(YssFilesysInitUploadRequest request) {

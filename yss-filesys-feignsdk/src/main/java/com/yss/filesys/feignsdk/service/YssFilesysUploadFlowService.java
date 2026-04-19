@@ -8,11 +8,14 @@ import com.yss.filesys.feignsdk.dto.YssFilesysInitUploadRequest;
 import com.yss.filesys.feignsdk.dto.YssFilesysMergeChunksRequest;
 import com.yss.filesys.feignsdk.dto.YssFilesysTransferTaskDTO;
 import com.yss.filesys.feignsdk.dto.YssFilesysUploadFlowResult;
+import com.yss.filesys.feignsdk.properties.YssFilesysFeignSdkProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
@@ -30,15 +33,18 @@ public class YssFilesysUploadFlowService {
     private static final long DEFAULT_CHUNK_SIZE = 5L * 1024 * 1024;
 
     private final YssFilesysTransferSdkService transferSdkService;
+    private final YssFilesysFeignSdkProperties properties;
 
-    public YssFilesysUploadFlowService(YssFilesysTransferSdkService transferSdkService) {
+    public YssFilesysUploadFlowService(YssFilesysTransferSdkService transferSdkService,
+                                       YssFilesysFeignSdkProperties properties) {
         this.transferSdkService = transferSdkService;
+        this.properties = properties;
     }
 
     public YssFilesysUploadFlowResult upload(MultipartFile file,
                                              String parentId,
                                              String storageSettingId) throws IOException {
-        return upload(file, parentId, storageSettingId, DEFAULT_CHUNK_SIZE);
+        return upload(file, parentId, storageSettingId, properties.getDefaultChunkSize());
     }
 
     public YssFilesysUploadFlowResult upload(MultipartFile file,
@@ -48,6 +54,31 @@ public class YssFilesysUploadFlowService {
         String fileName = file.getOriginalFilename() == null ? file.getName() : file.getOriginalFilename();
         String mimeType = file.getContentType() == null ? "application/octet-stream" : file.getContentType();
         return upload(file.getBytes(), fileName, mimeType, parentId, storageSettingId, chunkSize);
+    }
+
+    public YssFilesysUploadFlowResult upload(Path filePath,
+                                             String parentId,
+                                             String storageSettingId) throws IOException {
+        return upload(filePath, parentId, storageSettingId, properties.getDefaultChunkSize());
+    }
+
+    public YssFilesysUploadFlowResult upload(Path filePath,
+                                             String parentId,
+                                             String storageSettingId,
+                                             long chunkSize) throws IOException {
+        if (filePath == null) {
+            throw new IllegalArgumentException("文件路径不能为空");
+        }
+        if (!Files.exists(filePath)) {
+            throw new IllegalArgumentException("文件不存在: " + filePath);
+        }
+        byte[] content = Files.readAllBytes(filePath);
+        String fileName = filePath.getFileName() == null ? filePath.toString() : filePath.getFileName().toString();
+        String mimeType = Files.probeContentType(filePath);
+        if (mimeType == null || mimeType.isBlank()) {
+            mimeType = "application/octet-stream";
+        }
+        return upload(content, fileName, mimeType, parentId, storageSettingId, chunkSize);
     }
 
     public YssFilesysUploadFlowResult upload(byte[] content,
