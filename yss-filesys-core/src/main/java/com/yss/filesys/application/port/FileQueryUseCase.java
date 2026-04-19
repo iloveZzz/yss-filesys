@@ -21,4 +21,12 @@ public interface FileQueryUseCase {
     String getFileUrl(String fileId, String userId, Integer expireSeconds);
 
     FileDownloadDTO downloadFile(String fileId, String userId);
+
+    /**
+     * 批量下载文件
+     * @param fileIds 文件ID列表
+     * @param userId 用户ID
+     * @return 文件下载DTO列表
+     */
+    List<FileDownloadDTO> downloadFiles(List<String> fileIds, String userId);
 }

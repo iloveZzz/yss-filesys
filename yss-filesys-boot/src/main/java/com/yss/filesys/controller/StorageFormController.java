@@ -23,13 +23,13 @@ public class StorageFormController {
 
     @GetMapping
     @Operation(summary = "查询全部存储表单模板")
-    public MultiResult<StorageFormTemplateDTO> list() {
+    public MultiResult<StorageFormTemplateDTO> listStorageFormTemplates() {
         return MultiResult.of(storageFormTemplateRegistry.listTemplates());
     }
 
     @GetMapping("/{identifier}")
     @Operation(summary = "根据标识查询存储表单模板")
-    public SingleResult<StorageFormTemplateDTO> get(@PathVariable String identifier) {
+    public SingleResult<StorageFormTemplateDTO> getStorageFormTemplateByIdentifier(@PathVariable String identifier) {
         return SingleResult.of(storageFormTemplateRegistry.getTemplate(identifier)
                 .orElseThrow(() -> new BizException("未找到存储表单模板: " + identifier)));
     }

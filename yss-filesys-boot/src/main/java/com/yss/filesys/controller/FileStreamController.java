@@ -68,9 +68,10 @@ public class FileStreamController {
      * @param previewToken 预览令牌
      * @param rangeHeader  Range请求头
      * @return 文件流响应
+     * @download
      */
     @GetMapping("/stream/{fileId}")
-    public ResponseEntity<?> stream(@PathVariable String fileId,
+    public ResponseEntity<?> streamFile(@PathVariable String fileId,
                                     @RequestParam String previewToken,
                                     @RequestHeader(value = "Range", required = false) String rangeHeader) {
         if (!previewTokenStore.verify(previewToken, fileId)) {
@@ -117,9 +118,10 @@ public class FileStreamController {
      * @param innerPath     压缩包内文件路径
      * @param previewToken  预览令牌
      * @return 文件流响应
+     * @download
      */
     @GetMapping("/archive/stream/{archiveFileId}")
-    public ResponseEntity<?> streamArchiveInner(@PathVariable String archiveFileId,
+    public ResponseEntity<?> streamArchiveFile(@PathVariable String archiveFileId,
                                                 @RequestParam String innerPath,
                                                 @RequestParam String previewToken) {
         String decodedInnerPath = URLDecoder.decode(innerPath, StandardCharsets.UTF_8);

@@ -75,7 +75,7 @@ public class FileShareController {
      */
     @PostMapping
     @Operation(summary = "创建分享")
-    public SingleResult<FileShareDTO> create(@Valid @RequestBody CreateShareCommand command) {
+    public SingleResult<FileShareDTO> createFileShare(@Valid @RequestBody CreateShareCommand command) {
         command.setUserId(AnonymousUserContext.userId());
         return SingleResult.of(fileShareCommandUseCase.create(command));
     }
@@ -86,7 +86,7 @@ public class FileShareController {
      */
     @GetMapping
     @Operation(summary = "按用户查询分享")
-    public MultiResult<FileShareDTO> listByUser() {
+    public MultiResult<FileShareDTO> listFileSharesByUser() {
         return MultiResult.of(fileShareQueryUseCase.listByUserId(AnonymousUserContext.userId()));
     }
 
@@ -95,7 +95,7 @@ public class FileShareController {
      */
     @GetMapping("/pages")
     @Operation(summary = "分页查询分享")
-    public PageResult<FileShareDTO> pageByUser(@RequestParam(defaultValue = "1") long pageNo,
+    public PageResult<FileShareDTO> pageFileSharesByUser(@RequestParam(defaultValue = "1") long pageNo,
                                                @RequestParam(defaultValue = "20") long pageSize) {
         com.yss.filesys.application.dto.PageDTO<FileShareDTO> result = fileShareQueryUseCase.pageByUserId(AnonymousUserContext.userId(), pageNo, pageSize);
         return PageResult.of(result.getRecords(), result.getTotal(), Math.toIntExact(result.getPageSize()), Math.toIntExact(result.getPageNo()));
@@ -109,7 +109,7 @@ public class FileShareController {
      */
     @GetMapping("/{shareId}")
     @Operation(summary = "查询分享详情")
-    public SingleResult<FileShareDTO> getById(@PathVariable String shareId) {
+    public SingleResult<FileShareDTO> getFileShareById(@PathVariable String shareId) {
         return SingleResult.of(fileShareQueryUseCase.getById(shareId));
     }
 
@@ -183,7 +183,7 @@ public class FileShareController {
      */
     @DeleteMapping
     @Operation(summary = "批量取消分享")
-    public SingleResult<Void> cancel(@RequestBody List<String> shareIds) {
+    public SingleResult<Void> cancelFileShares(@RequestBody List<String> shareIds) {
         fileShareCommandUseCase.cancelByIds(shareIds);
         return SingleResult.buildSuccess();
     }
@@ -193,7 +193,7 @@ public class FileShareController {
      */
     @DeleteMapping("/clears")
     @Operation(summary = "清空当前用户所有分享")
-    public SingleResult<Void> clearAll() {
+    public SingleResult<Void> clearAllFileShares() {
         fileShareCommandUseCase.clearAll(AnonymousUserContext.userId());
         return SingleResult.buildSuccess();
     }

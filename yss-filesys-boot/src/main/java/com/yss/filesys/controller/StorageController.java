@@ -58,7 +58,7 @@ public class StorageController {
      */
     @GetMapping("/platforms")
     @Operation(summary = "查询存储平台列表")
-    public MultiResult<StoragePlatformDTO> listPlatforms() {
+    public MultiResult<StoragePlatformDTO> listStoragePlatforms() {
         return MultiResult.of(storageQueryUseCase.listPlatforms());
     }
 
@@ -67,7 +67,7 @@ public class StorageController {
      */
     @GetMapping("/platform/{identifier}")
     @Operation(summary = "根据标识符查询存储平台")
-    public SingleResult<StoragePlatformDTO> getPlatformByIdentifier(@PathVariable String identifier) {
+    public SingleResult<StoragePlatformDTO> getStoragePlatformByIdentifier(@PathVariable String identifier) {
         return SingleResult.of(storageQueryUseCase.getPlatformByIdentifier(identifier)
                 .orElseThrow(() -> new BizException("存储平台不存在: " + identifier)));
     }
@@ -78,7 +78,7 @@ public class StorageController {
      */
     @GetMapping("/settings")
     @Operation(summary = "按用户查询存储配置")
-    public MultiResult<StorageSettingDTO> listSettings() {
+    public MultiResult<StorageSettingDTO> listStorageSettings() {
         return MultiResult.of(storageQueryUseCase.listSettingsByUser(AnonymousUserContext.userId()));
     }
 
@@ -87,7 +87,7 @@ public class StorageController {
      */
     @GetMapping("/active-platforms")
     @Operation(summary = "获取已启用存储配置列表")
-    public MultiResult<StorageActivePlatformDTO> listActivePlatforms() {
+    public MultiResult<StorageActivePlatformDTO> listActiveStoragePlatforms() {
         return MultiResult.of(storageQueryUseCase.listActivePlatforms(AnonymousUserContext.userId()));
     }
 
@@ -96,7 +96,7 @@ public class StorageController {
      */
     @GetMapping("/capacity")
     @Operation(summary = "获取存储容量统计")
-    public SingleResult<StorageCapacityDTO> getCapacity(@org.springframework.web.bind.annotation.RequestParam(required = false) String settingId) {
+    public SingleResult<StorageCapacityDTO> getStorageCapacity(@org.springframework.web.bind.annotation.RequestParam(required = false) String settingId) {
         return SingleResult.of(storageQueryUseCase.getCapacity(settingId));
     }
 
@@ -108,7 +108,7 @@ public class StorageController {
      */
     @PostMapping("/settings")
     @Operation(summary = "新增或更新存储配置")
-    public SingleResult<StorageSettingDTO> upsert(@Valid @RequestBody UpsertStorageSettingCommand command) {
+    public SingleResult<StorageSettingDTO> upsertStorageSetting(@Valid @RequestBody UpsertStorageSettingCommand command) {
         command.setUserId(AnonymousUserContext.userId());
         return SingleResult.of(storageCommandUseCase.upsert(command));
     }
@@ -122,7 +122,7 @@ public class StorageController {
      */
     @PutMapping("/settings/{id}/status/{enabled}")
     @Operation(summary = "启用或禁用存储配置")
-    public SingleResult<Void> updateStatus(@PathVariable String id, @PathVariable Integer enabled) {
+    public SingleResult<Void> updateStorageSettingStatus(@PathVariable String id, @PathVariable Integer enabled) {
         UpdateStorageSettingStatusCommand command = new UpdateStorageSettingStatusCommand();
         command.setId(id);
         command.setEnabled(enabled);
@@ -135,7 +135,7 @@ public class StorageController {
      */
     @DeleteMapping("/settings/{id}")
     @Operation(summary = "删除存储配置")
-    public SingleResult<Void> deleteSetting(@PathVariable String id) {
+    public SingleResult<Void> deleteStorageSetting(@PathVariable String id) {
         storageCommandUseCase.delete(id);
         return SingleResult.buildSuccess();
     }

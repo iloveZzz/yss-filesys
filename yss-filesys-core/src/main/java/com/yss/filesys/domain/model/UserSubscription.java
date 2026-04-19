@@ -1,5 +1,6 @@
 package com.yss.filesys.domain.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Value;
 
@@ -12,6 +13,8 @@ public class UserSubscription {
     String userId;
     Long planId;
     Integer status;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     LocalDateTime subscriptionDate;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     LocalDateTime expireDate;
 }

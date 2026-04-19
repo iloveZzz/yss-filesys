@@ -198,7 +198,7 @@ public class FileTransferController {
      */
     @DeleteMapping("/{taskId}")
     @Operation(summary = "取消传输任务")
-    public SingleResult<Void> cancel(@PathVariable String taskId) {
+    public SingleResult<Void> cancelFileTransfer(@PathVariable String taskId) {
         fileTransferCommandUseCase.cancel(taskId);
         return SingleResult.buildSuccess();
     }
@@ -209,7 +209,7 @@ public class FileTransferController {
      */
     @GetMapping({"", "/files"})
     @Operation(summary = "按用户查询传输任务")
-    public MultiResult<FileTransferTaskDTO> listByUser(@RequestParam(required = false) Integer statusType) {
+    public MultiResult<FileTransferTaskDTO> listFileTransfersByUser(@RequestParam(required = false) Integer statusType) {
         return MultiResult.of(fileTransferQueryUseCase.listByUserId(AnonymousUserContext.userId(), statusType));
     }
 
@@ -230,7 +230,7 @@ public class FileTransferController {
      */
     @GetMapping("/{taskId}")
     @Operation(summary = "查询传输任务详情")
-    public SingleResult<FileTransferTaskDTO> getByTaskId(@PathVariable String taskId) {
+    public SingleResult<FileTransferTaskDTO> getFileTransferByTaskId(@PathVariable String taskId) {
         return SingleResult.of(fileTransferQueryUseCase.getByTaskId(taskId));
     }
 
@@ -257,7 +257,7 @@ public class FileTransferController {
      */
     @DeleteMapping("/clears")
     @Operation(summary = "清理已完成传输任务")
-    public SingleResult<Void> clearTransfers() {
+    public SingleResult<Void> clearFinishedFileTransfers() {
         fileTransferCommandUseCase.clearFinished(AnonymousUserContext.userId());
         return SingleResult.buildSuccess();
     }

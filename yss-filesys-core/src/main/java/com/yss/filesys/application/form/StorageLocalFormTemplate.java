@@ -35,17 +35,16 @@ public class StorageLocalFormTemplate extends FormTemplate {
         return YssFormilyDsl.form()
                 .mode(YssFormilyDsl.Mode.EDIT)
                 .horizontal(120)
-                .gridDefaults(2, 1, 260, 16, 0)
+                .gridDefaults(1, 1, 260, 16, 0)
                 .initialValues(initialValues())
                 .detailOption("bordered", true)
                 .detailOption("maxColumns", 1)
                 .nodes(
-                        YssFormilyDsl.groupHeader("base", "基础配置").gridSpan(2),
                         YssFormilyDsl.input("storageRoot", "存储根目录")
                                 .required()
                                 .placeholder("/tmp/yss-filesys/storage")
                                 .tooltip("本地存储文件根目录")
-                                .gridSpan(2)
+                                .gridSpan(1)
                 )
                 .build();
     }

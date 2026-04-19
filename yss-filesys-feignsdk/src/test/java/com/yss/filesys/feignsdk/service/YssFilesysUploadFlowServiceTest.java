@@ -106,7 +106,7 @@ class YssFilesysUploadFlowServiceTest {
     @Test
     void should_run_full_upload_flow() throws IOException {
         byte[] content = new byte[]{1, 2, 3, 4, 5, 6, 7};
-        var result = uploadFlowService.upload(content, "demo.txt", "text/plain", "parent-001", null, 4);
+        var result = uploadFlowService.upload(content, "demo.txt", "text/plain", "parent-001", null, 100L * 1024 * 1024);
 
         assertThat(result.isInstantUpload()).isFalse();
         assertThat(result.getTaskId()).isEqualTo("task-001");

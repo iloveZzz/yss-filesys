@@ -50,7 +50,7 @@ public class SubscriptionPlanController {
      */
     @GetMapping("/pages")
     @Operation(summary = "分页获取套餐列表")
-    public PageResult<SubscriptionPlanDTO> getPages(SubscriptionPlanPageQuery query) {
+    public PageResult<SubscriptionPlanDTO> listSubscriptionPlanPages(SubscriptionPlanPageQuery query) {
         com.yss.filesys.application.dto.PageDTO<SubscriptionPlanDTO> result = subscriptionPlanAppService.page(query);
         return PageResult.of(result.getRecords(), result.getTotal(), result.getPageSize(), result.getPageNo());
     }
@@ -63,7 +63,7 @@ public class SubscriptionPlanController {
      */
     @GetMapping("/info/{id}")
     @Operation(summary = "获取套餐详细信息")
-    public SingleResult<SubscriptionPlanDTO> getDetail(@PathVariable Long id) {
+    public SingleResult<SubscriptionPlanDTO> getSubscriptionPlanById(@PathVariable Long id) {
         return SingleResult.of(subscriptionPlanAppService.detail(id));
     }
 
@@ -75,7 +75,7 @@ public class SubscriptionPlanController {
      */
     @PostMapping
     @Operation(summary = "添加套餐")
-    public SingleResult<Void> add(@Valid @RequestBody SubscriptionPlanAddCommand command) {
+    public SingleResult<Void> addSubscriptionPlan(@Valid @RequestBody SubscriptionPlanAddCommand command) {
         subscriptionPlanAppService.add(command);
         return SingleResult.buildSuccess();
     }
@@ -88,7 +88,7 @@ public class SubscriptionPlanController {
      */
     @PutMapping
     @Operation(summary = "编辑套餐")
-    public SingleResult<Void> edit(@Valid @RequestBody SubscriptionPlanEditCommand command) {
+    public SingleResult<Void> editSubscriptionPlan(@Valid @RequestBody SubscriptionPlanEditCommand command) {
         subscriptionPlanAppService.edit(command);
         return SingleResult.buildSuccess();
     }
@@ -101,7 +101,7 @@ public class SubscriptionPlanController {
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "根据ID删除套餐")
-    public SingleResult<Void> delete(@PathVariable Long id) {
+    public SingleResult<Void> deleteSubscriptionPlanById(@PathVariable Long id) {
         subscriptionPlanAppService.delete(id);
         return SingleResult.buildSuccess();
     }

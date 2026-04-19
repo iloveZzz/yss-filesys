@@ -207,6 +207,7 @@ public class FileController {
     /**
      * 下载文件
      * @return 文件内容
+     * @download
      */
     @GetMapping("/download/{fileId}")
     @Operation(summary = "下载文件")
@@ -222,6 +223,7 @@ public class FileController {
      * 批量下载文件(打包为zip)
      * @param fileIds 文件ID列表
      * @return zip压缩文件内容
+     * @download
      */
     @PostMapping("/download/batch")
     @Operation(summary = "批量下载文件")

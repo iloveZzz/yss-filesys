@@ -41,7 +41,7 @@ public class SharePageController {
      * @return 模板名称
      */
     @GetMapping("/share/{shareId}")
-    public String sharePage(@PathVariable String shareId,
+    public String renderFileSharePage(@PathVariable String shareId,
                             @RequestParam(required = false) String shareCode,
                             Model model) {
         try {

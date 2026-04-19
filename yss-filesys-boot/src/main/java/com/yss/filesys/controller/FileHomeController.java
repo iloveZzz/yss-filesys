@@ -35,7 +35,7 @@ public class FileHomeController {
      */
     @GetMapping
     @Operation(summary = "获取文件首页统计")
-    public SingleResult<FileHomeDTO> home(@RequestParam(required = false) Integer unit,
+    public SingleResult<FileHomeDTO> getFileHomeStats(@RequestParam(required = false) Integer unit,
                                           @RequestParam(required = false) Integer dateType) {
         return SingleResult.of(fileHomeUseCase.getHome(AnonymousUserContext.userId(), unit, dateType));
     }

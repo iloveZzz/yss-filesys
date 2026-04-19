@@ -35,12 +35,11 @@ public class StorageOssFormTemplate extends FormTemplate {
         return YssFormilyDsl.form()
                 .mode(YssFormilyDsl.Mode.EDIT)
                 .horizontal(120)
-                .gridDefaults(2, 1, 260, 16, 0)
+                .gridDefaults(1, 1, 260, 16, 0)
                 .initialValues(initialValues())
                 .detailOption("bordered", true)
                 .detailOption("maxColumns", 1)
                 .nodes(
-                        YssFormilyDsl.groupHeader("base", "基础配置").gridSpan(2),
                         YssFormilyDsl.input("bucket", "Bucket")
                                 .required()
                                 .placeholder("例如：my-bucket")
@@ -55,12 +54,11 @@ public class StorageOssFormTemplate extends FormTemplate {
                                 .gridSpan(1),
                         YssFormilyDsl.input("accessKeySecret", "Access Key Secret")
                                 .required()
-                                .component("Input.Password")
                                 .placeholder("请输入 Access Key Secret")
                                 .gridSpan(1),
                         YssFormilyDsl.input("prefix", "前缀")
                                 .placeholder("可选，例如：tenant-a/")
-                                .gridSpan(2)
+                                .gridSpan(1)
                 )
                 .build();
     }

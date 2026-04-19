@@ -40,7 +40,7 @@ public class FilePreviewController {
      */
     @PostMapping("/token/{fileId}")
     @Operation(summary = "获取预览 token")
-    public SingleResult<String> issueToken(@PathVariable String fileId) {
+    public SingleResult<String> issueFilePreviewToken(@PathVariable String fileId) {
         return SingleResult.of(filePreviewUseCase.issueToken(fileId));
     }
 
@@ -53,7 +53,7 @@ public class FilePreviewController {
      */
     @GetMapping("/{fileId}")
     @Operation(summary = "获取预览信息")
-    public SingleResult<FilePreviewDTO> preview(@PathVariable String fileId, @RequestParam String previewToken) {
+    public SingleResult<FilePreviewDTO> getFilePreviewInfo(@PathVariable String fileId, @RequestParam String previewToken) {
         return SingleResult.of(filePreviewUseCase.preview(fileId, previewToken));
     }
 
@@ -66,7 +66,7 @@ public class FilePreviewController {
      */
     @PostMapping("/archive/token/{archiveFileId}")
     @Operation(summary = "获取压缩包内文件预览 token")
-    public SingleResult<String> issueArchiveToken(@PathVariable String archiveFileId, @RequestParam String innerPath) {
+    public SingleResult<String> issueArchiveFilePreviewToken(@PathVariable String archiveFileId, @RequestParam String innerPath) {
         return SingleResult.of(filePreviewUseCase.issueArchiveToken(archiveFileId, innerPath));
     }
 
@@ -80,7 +80,7 @@ public class FilePreviewController {
      */
     @GetMapping("/archive/{archiveFileId}")
     @Operation(summary = "获取压缩包内文件预览信息")
-    public SingleResult<FilePreviewDTO> previewArchive(@PathVariable String archiveFileId,
+    public SingleResult<FilePreviewDTO> getArchiveFilePreviewInfo(@PathVariable String archiveFileId,
                                                        @RequestParam String innerPath,
                                                        @RequestParam String previewToken) {
         return SingleResult.of(filePreviewUseCase.previewArchive(archiveFileId, innerPath, previewToken));

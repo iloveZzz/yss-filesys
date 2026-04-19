@@ -33,6 +33,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Comparator;
@@ -284,6 +285,26 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
         } catch (IOException e) {
             throw new BizException("下载失败: " + e.getMessage());
         }
+    }
+
+    @Override
+    public List<FileDownloadDTO> downloadFiles(List<String> fileIds, String userId) {
+        userId = resolveUserId(userId);
+        if (fileIds == null || fileIds.isEmpty()) {
+            throw new BizException("文件ID列表不能为空");
+        }
+        
+        List<FileDownloadDTO> downloadList = new ArrayList<>();
+        for (String fileId : fileIds) {
+            try {
+                FileDownloadDTO dto = downloadFile(fileId, userId);
+                downloadList.add(dto);
+            } catch (Exception e) {
+                // 记录错误但继续处理其他文件
+                throw new BizException("下载文件失败: " + fileId + ", 错误: " + e.getMessage());
+            }
+        }
+        return downloadList;
     }
 
     @Override

@@ -12,14 +12,20 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
-      host: 127.0.0.1
+      client-type: jedis
+      host: localhost
       port: 30644
+      jedis:
+        pool:
+          enabled: true
   liquibase:
     enabled: true
     change-log: classpath:/db/changelog/db.changelog-master.yaml
   quartz:
     job-store-type: memory
     auto-startup: true
+  profiles:
+    active: nacos
 
 mybatis-plus:
   configuration:
