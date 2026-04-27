@@ -24,6 +24,7 @@ import com.yss.filesys.domain.gateway.FileUserFavoriteGateway;
 import com.yss.filesys.domain.model.BizException;
 import com.yss.filesys.domain.model.FileRecord;
 import com.yss.filesys.domain.model.FileUserFavorite;
+import com.yss.filesys.application.service.UploadDestinationReservationService;
 import com.yss.filesys.storage.plugin.boot.StorageServiceFacade;
 import com.yss.filesys.storage.plugin.core.IStorageOperationService;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -45,16 +47,22 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class FileAppService implements FileCommandUseCase, FileQueryUseCase, FileRecycleUseCase, FileFavoriteUseCase {
+
+    private static final ConcurrentMap<String, Object> DIRECTORY_CREATE_LOCKS = new ConcurrentHashMap<>();
 
     private final FileRecordGateway fileRecordGateway;
     private final FileShareItemGateway fileShareItemGateway;
     private final FileUserFavoriteGateway fileUserFavoriteGateway;
     private final StorageServiceFacade storageServiceFacade;
+    private final UploadDestinationReservationService uploadDestinationReservationService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -63,21 +71,62 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
         if (folderName.isEmpty()) {
             throw new BizException("目录名称不能为空");
         }
-        LocalDateTime now = LocalDateTime.now();
-        FileRecord record = FileRecord.builder()
-                .fileId(UUID.randomUUID().toString().replace("-", ""))
-                .objectKey(null)
-                .originalName(folderName)
-                .displayName(folderName)
-                .isDir(true)
-                .parentId(command.getParentId())
-                .userId(resolveUserId(command.getUserId()))
-                .storageSettingId(resolveStorageSettingId(command.getStorageSettingId()))
-                .uploadTime(now)
-                .updateTime(now)
-                .isDeleted(false)
-                .build();
-        return toDTO(fileRecordGateway.save(record), false);
+        String userId = resolveUserId(command.getUserId());
+        String parentId = normalizeParentId(command.getParentId());
+        String lockKey = buildDirectoryCreateLockKey(userId, parentId, folderName);
+        String reservationId = "dir-" + UUID.randomUUID().toString().replace("-", "");
+        uploadDestinationReservationService.reserve(reservationId, userId, parentId, folderName);
+        try {
+            synchronized (DIRECTORY_CREATE_LOCKS.computeIfAbsent(lockKey, ignored -> new Object())) {
+            log.info("创建目录: userId={}, parentId={}, folderName={}, storageSettingId={}",
+                    userId, command.getParentId(), folderName, command.getStorageSettingId());
+            List<FileRecord> siblings = fileRecordGateway.listByUserAndParentAndDeleted(userId, parentId, false);
+            List<FileRecord> sameNameRecords = siblings.stream()
+                    .filter(record -> folderName.equals(record.getDisplayName()) || folderName.equals(record.getOriginalName()))
+                    .toList();
+            if (!sameNameRecords.isEmpty()) {
+                List<FileRecord> sameNameDirectories = sameNameRecords.stream()
+                        .filter(record -> Boolean.TRUE.equals(record.getIsDir()))
+                        .sorted(Comparator.comparing(FileRecord::getUpdateTime, Comparator.nullsLast(Comparator.reverseOrder()))
+                                .thenComparing(FileRecord::getUploadTime, Comparator.nullsLast(Comparator.reverseOrder())))
+                        .toList();
+                List<FileRecord> sameNameFiles = sameNameRecords.stream()
+                        .filter(record -> !Boolean.TRUE.equals(record.getIsDir()))
+                        .toList();
+                if (!sameNameFiles.isEmpty()) {
+                    log.warn("目标目录存在同名文件，直接替换为目录: userId={}, parentId={}, folderName={}, fileCount={}",
+                            userId, command.getParentId(), folderName, sameNameFiles.size());
+                    deleteRecordsWithPhysicalCleanup(sameNameFiles);
+                }
+                if (!sameNameDirectories.isEmpty()) {
+                    FileRecord existingDirectory = sameNameDirectories.get(0);
+                    if (sameNameDirectories.size() > 1) {
+                        mergeDuplicateDirectories(userId, existingDirectory, sameNameDirectories.subList(1, sameNameDirectories.size()), folderName, command.getParentId());
+                    }
+                    log.info("目录已存在，直接复用: userId={}, parentId={}, folderName={}, fileId={}",
+                            userId, command.getParentId(), folderName, existingDirectory.getFileId());
+                    return toDTO(existingDirectory, false);
+                }
+            }
+            LocalDateTime now = LocalDateTime.now();
+            FileRecord record = FileRecord.builder()
+                    .fileId(UUID.randomUUID().toString().replace("-", ""))
+                    .objectKey(null)
+                    .originalName(folderName)
+                    .displayName(folderName)
+                    .isDir(true)
+                    .parentId(parentId)
+                    .userId(userId)
+                    .storageSettingId(resolveStorageSettingId(command.getStorageSettingId()))
+                    .uploadTime(now)
+                    .updateTime(now)
+                    .isDeleted(false)
+                    .build();
+            return toDTO(fileRecordGateway.save(record), false);
+            }
+        } finally {
+            uploadDestinationReservationService.release(reservationId);
+        }
     }
 
     @Override
@@ -181,7 +230,7 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
             if (favoriteIds.isEmpty()) {
                 return PageDTO.<FileRecordDTO>builder()
                         .total(0L)
-                        .pageNo(query.getPageNo())
+                        .pageIndex(query.getPageIndex())
                         .pageSize(query.getPageSize())
                         .records(List.of())
                         .build();
@@ -195,7 +244,7 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
         );
         return PageDTO.<FileRecordDTO>builder()
                 .total(fileRecordGateway.count(query))
-                .pageNo(query.getPageNo())
+                .pageIndex(query.getPageIndex())
                 .pageSize(query.getPageSize())
                 .records(records.stream().map(record -> toDTO(record, favoriteIds.contains(record.getFileId()))).toList())
                 .build();
@@ -256,6 +305,8 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
         if (record.getObjectKey() == null || record.getObjectKey().isBlank()) {
             throw new BizException("文件不存在或未上传完成");
         }
+        log.info("生成文件URL: userId={}, fileId={}, fileName={}, expireSeconds={}",
+                userId, fileId, record.getDisplayName(), expireSeconds);
         StringBuilder url = new StringBuilder("/files/download/").append(fileId);
         if (expireSeconds != null && expireSeconds > 0) {
             url.append("&expireSeconds=").append(expireSeconds);
@@ -276,15 +327,43 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
             throw new BizException("文件不存在");
         }
         try {
+            log.info("开始下载文件: userId={}, fileId={}, fileName={}, objectKey={}",
+                    userId, fileId, record.getDisplayName(), record.getObjectKey());
             touchFiles(List.of(fileId), LocalDateTime.now());
-            return FileDownloadDTO.builder()
+            FileDownloadDTO download = FileDownloadDTO.builder()
                     .fileName(record.getDisplayName())
                     .fileSize(record.getSize())
                     .content(storageService.downloadFile(record.getObjectKey()).readAllBytes())
                     .build();
+            log.info("下载文件完成: userId={}, fileId={}, fileName={}, fileSize={}",
+                    userId, fileId, download.getFileName(), download.getFileSize());
+            return download;
         } catch (IOException e) {
+            log.error("下载文件失败: userId={}, fileId={}, message={}", userId, fileId, e.getMessage(), e);
             throw new BizException("下载失败: " + e.getMessage());
         }
+    }
+
+    @Override
+    public FileDownloadDTO downloadFileByParentAndName(String parentId, String fileName, String userId) {
+        userId = resolveUserId(userId);
+        String normalizedFileName = fileName == null ? "" : fileName.trim();
+        if (normalizedFileName.isEmpty()) {
+            throw new BizException("文件名称不能为空");
+        }
+        String normalizedParentId = normalizeParentId(parentId);
+        List<FileRecord> matches = fileRecordGateway.listByUserAndParentAndDeleted(userId, normalizedParentId, false).stream()
+                .filter(record -> !Boolean.TRUE.equals(record.getIsDir()))
+                .filter(record -> normalizedFileName.equals(record.getDisplayName()) || normalizedFileName.equals(record.getOriginalName()))
+                .toList();
+        if (matches.isEmpty()) {
+            throw new BizException("文件不存在: " + normalizedFileName);
+        }
+        if (matches.size() > 1) {
+            throw new BizException("文件名称不唯一，请使用文件ID下载: " + normalizedFileName);
+        }
+        log.info("按目录和名称下载文件: userId={}, parentId={}, fileName={}", userId, parentId, normalizedFileName);
+        return downloadFile(matches.get(0).getFileId(), userId);
     }
 
     @Override
@@ -293,7 +372,8 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
         if (fileIds == null || fileIds.isEmpty()) {
             throw new BizException("文件ID列表不能为空");
         }
-        
+        log.info("批量下载文件: userId={}, fileCount={}", userId, fileIds.size());
+
         List<FileDownloadDTO> downloadList = new ArrayList<>();
         for (String fileId : fileIds) {
             try {
@@ -301,6 +381,7 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
                 downloadList.add(dto);
             } catch (Exception e) {
                 // 记录错误但继续处理其他文件
+                log.warn("批量下载文件失败，跳过当前文件: userId={}, fileId={}, message={}", userId, fileId, e.getMessage());
                 throw new BizException("下载文件失败: " + fileId + ", 错误: " + e.getMessage());
             }
         }
@@ -315,6 +396,7 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
         if (favoriteIds.isEmpty()) {
             throw new BizException("没有找到可收藏的文件");
         }
+        log.info("收藏文件: userId={}, fileCount={}", userId, favoriteIds.size());
         LocalDateTime now = LocalDateTime.now();
         List<FileUserFavorite> favorites = favoriteIds.stream()
                 .map(fileId -> FileUserFavorite.builder()
@@ -335,6 +417,7 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
         if (fileIds.isEmpty()) {
             return;
         }
+        log.info("取消收藏文件: userId={}, fileCount={}", userId, fileIds.size());
         fileUserFavoriteGateway.deleteByUserAndFileIds(userId, fileIds);
         touchFiles(fileIds, LocalDateTime.now());
     }
@@ -487,12 +570,12 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
         }
     }
 
-    private void deleteRecycleRecords(Set<String> fileIds) {
-        List<FileRecord> records = fileRecordGateway.listByIds(fileIds);
-        if (records.isEmpty()) {
+    private void deleteRecordsWithPhysicalCleanup(List<FileRecord> records) {
+        if (records == null || records.isEmpty()) {
             return;
         }
 
+        List<String> fileIds = records.stream().map(FileRecord::getFileId).toList();
         java.util.Map<String, String> deletions = new java.util.LinkedHashMap<>();
         for (FileRecord record : records) {
             String objectKey = record.getObjectKey();
@@ -504,21 +587,69 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
             }
         }
 
-        fileRecordGateway.deleteByIds(fileIds);
+        fileUserFavoriteGateway.deleteByUserAndFileIds(records.get(0).getUserId(), fileIds);
         fileShareItemGateway.deleteByFileIds(fileIds);
+        fileRecordGateway.deleteByIds(fileIds);
 
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                for (java.util.Map.Entry<String, String> entry : deletions.entrySet()) {
-                    try {
-                        storageServiceFacade.getStorageService(entry.getValue()).deleteFile(entry.getKey());
-                    } catch (Exception e) {
-                        // 物理删除失败不回滚数据库事务，保留告警即可
-                    }
+        Runnable cleanup = () -> {
+            for (java.util.Map.Entry<String, String> entry : deletions.entrySet()) {
+                try {
+                    storageServiceFacade.getStorageService(entry.getValue()).deleteFile(entry.getKey());
+                } catch (Exception e) {
+                    log.warn("物理删除文件失败: objectKey={}, storageSettingId={}, message={}",
+                            entry.getKey(), entry.getValue(), e.getMessage());
                 }
             }
-        });
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    cleanup.run();
+                }
+            });
+        } else {
+            cleanup.run();
+        }
+    }
+
+    private void mergeDuplicateDirectories(String userId,
+                                           FileRecord canonicalDirectory,
+                                           List<FileRecord> duplicateDirectories,
+                                           String folderName,
+                                           String parentId) {
+        if (canonicalDirectory == null || duplicateDirectories == null || duplicateDirectories.isEmpty()) {
+            return;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        log.warn("目标目录存在重复同名目录，执行收敛: userId={}, parentId={}, folderName={}, duplicateCount={}, canonicalFileId={}",
+                userId, parentId, folderName, duplicateDirectories.size(), canonicalDirectory.getFileId());
+
+        for (FileRecord duplicateDirectory : duplicateDirectories) {
+            if (duplicateDirectory == null || duplicateDirectory.getFileId() == null || duplicateDirectory.getFileId().isBlank()) {
+                continue;
+            }
+            List<FileRecord> children = fileRecordGateway.listByUserAndParentAndDeleted(
+                    userId,
+                    duplicateDirectory.getFileId(),
+                    false
+            );
+            for (FileRecord child : children) {
+                fileRecordGateway.save(child.toBuilder()
+                        .parentId(canonicalDirectory.getFileId())
+                        .updateTime(now)
+                        .build());
+            }
+            deleteRecordsWithPhysicalCleanup(List.of(duplicateDirectory));
+        }
+    }
+
+    private void deleteRecycleRecords(Set<String> fileIds) {
+        List<FileRecord> records = fileRecordGateway.listByIds(fileIds);
+        if (records.isEmpty()) {
+            return;
+        }
+        deleteRecordsWithPhysicalCleanup(records);
     }
 
     private String resolveUserId(String userId) {
@@ -529,5 +660,9 @@ public class FileAppService implements FileCommandUseCase, FileQueryUseCase, Fil
         return storageSettingId == null || storageSettingId.isBlank()
                 ? com.yss.filesys.storage.plugin.core.config.StorageUtils.LOCAL_PLATFORM_IDENTIFIER
                 : storageSettingId;
+    }
+
+    private String buildDirectoryCreateLockKey(String userId, String parentId, String folderName) {
+        return (userId == null ? "" : userId) + "|" + (parentId == null ? "" : parentId) + "|" + folderName;
     }
 }

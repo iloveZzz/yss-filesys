@@ -24,6 +24,9 @@ public class YssFilesysInitUploadRequest {
 
     /**
      * 父目录ID。
+     * <p>
+     * 当通过目录路径上传时，由 SDK 自动解析或创建目录后回填该字段。
+     * </p>
      */
     private String parentId;
 
@@ -49,4 +52,12 @@ public class YssFilesysInitUploadRequest {
      * 存储配置ID。
      */
     private String storageSettingId;
+
+    /**
+     * 是否覆盖同目录下同名文件，默认覆盖。
+     * <p>
+     * 仅在初始化上传任务时生效，最终由后端传输任务持久化。
+     * </p>
+     */
+    private Boolean overwriteExisting = Boolean.TRUE;
 }

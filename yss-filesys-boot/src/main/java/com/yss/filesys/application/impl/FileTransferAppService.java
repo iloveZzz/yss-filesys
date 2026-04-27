@@ -8,18 +8,22 @@ import com.yss.filesys.application.command.UploadChunkCommand;
 import com.yss.filesys.application.dto.CheckUploadResultDTO;
 import com.yss.filesys.application.dto.FileTransferTaskDTO;
 import com.yss.filesys.application.dto.FileTransferStatsDTO;
+import com.yss.filesys.application.dto.PageDTO;
 import com.yss.filesys.application.dto.InitDownloadResultDTO;
 import com.yss.filesys.application.port.FileTransferCommandUseCase;
 import com.yss.filesys.application.port.FileTransferQueryUseCase;
 import com.yss.filesys.application.query.DownloadChunkQuery;
 import com.yss.filesys.common.AnonymousUserContext;
 import com.yss.filesys.domain.gateway.FileRecordGateway;
+import com.yss.filesys.domain.gateway.FileShareItemGateway;
+import com.yss.filesys.domain.gateway.FileUserFavoriteGateway;
 import com.yss.filesys.domain.gateway.FileTransferTaskGateway;
 import com.yss.filesys.domain.model.BizException;
 import com.yss.filesys.domain.model.FileRecord;
 import com.yss.filesys.domain.model.FileTransferTask;
 import com.yss.filesys.domain.model.TransferTaskStatus;
 import com.yss.filesys.domain.model.TransferTaskType;
+import com.yss.filesys.application.service.UploadDestinationReservationService;
 import com.yss.filesys.storage.plugin.boot.StorageServiceFacade;
 import com.yss.filesys.storage.plugin.core.IStorageOperationService;
 import com.yss.filesys.storage.plugin.core.config.StorageUtils;
@@ -28,6 +32,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,16 +45,19 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class FileTransferAppService implements FileTransferCommandUseCase, FileTransferQueryUseCase {
 
     private final FileTransferTaskGateway fileTransferTaskGateway;
     private final FileRecordGateway fileRecordGateway;
+    private final FileShareItemGateway fileShareItemGateway;
+    private final FileUserFavoriteGateway fileUserFavoriteGateway;
     private final StorageServiceFacade storageServiceFacade;
     private final TransferSseService transferSseService;
+    private final UploadDestinationReservationService uploadDestinationReservationService;
 
     @Value("${yss.files.storage-root:/tmp/yss-filesys/storage}")
     private String storageRoot;
@@ -57,33 +67,50 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
     public FileTransferTaskDTO initUpload(InitTransferUploadCommand command) {
         command.setUserId(resolveUserId(command.getUserId()));
         String taskId = UUID.randomUUID().toString().replace("-", "");
-        LocalDateTime now = LocalDateTime.now();
-        String storageSettingId = resolveStorageSettingId(command.getStorageSettingId());
-        String objectKey = buildObjectKey(command.getUserId(), taskId, command.getFileName());
-        FileTransferTask task = FileTransferTask.builder()
-                .taskId(taskId)
-                .uploadId(taskId)
-                .parentId(command.getParentId())
-                .userId(command.getUserId())
-                .storageSettingId(storageSettingId)
-                .objectKey(objectKey)
-                .fileName(command.getFileName())
-                .fileSize(command.getFileSize())
-                .mimeType(command.getMimeType())
-                .suffix(suffix(command.getFileName()))
-                .totalChunks(command.getTotalChunks())
-                .chunkSize(command.getChunkSize())
-                .taskType(TransferTaskType.upload)
-                .uploadedChunks(0)
-                .uploadedSize(0L)
-                .status(TransferTaskStatus.initialized)
-                .startTime(now)
-                .createdAt(now)
-                .updatedAt(now)
-                .build();
-        FileTransferTask saved = fileTransferTaskGateway.save(task);
-        transferSseService.sendStatus(saved.getUserId(), saved.getTaskId(), saved.getStatus().name(), "任务已初始化");
-        return toDTO(saved);
+        uploadDestinationReservationService.reserve(taskId, command.getUserId(), command.getParentId(), command.getFileName());
+        try {
+            log.info("收到上传初始化请求: userId={}, parentId={}, fileName={}, fileSize={}, totalChunks={}, chunkSize={}, overwriteExisting={}",
+                    command.getUserId(),
+                    command.getParentId(),
+                    command.getFileName(),
+                    command.getFileSize(),
+                    command.getTotalChunks(),
+                    command.getChunkSize(),
+                    resolveOverwriteExisting(command.getOverwriteExisting()));
+            LocalDateTime now = LocalDateTime.now();
+            String storageSettingId = resolveStorageSettingId(command.getStorageSettingId());
+            String objectKey = buildObjectKey(command.getUserId(), taskId, command.getFileName());
+            FileTransferTask task = FileTransferTask.builder()
+                    .taskId(taskId)
+                    .uploadId(taskId)
+                    .parentId(command.getParentId())
+                    .userId(command.getUserId())
+                    .storageSettingId(storageSettingId)
+                    .objectKey(objectKey)
+                    .fileName(command.getFileName())
+                    .fileSize(command.getFileSize())
+                    .mimeType(command.getMimeType())
+                    .suffix(suffix(command.getFileName()))
+                    .totalChunks(command.getTotalChunks())
+                    .chunkSize(command.getChunkSize())
+                    .taskType(TransferTaskType.upload)
+                    .uploadedChunks(0)
+                    .uploadedSize(0L)
+                    .overwriteExisting(resolveOverwriteExisting(command.getOverwriteExisting()))
+                    .status(TransferTaskStatus.initialized)
+                    .startTime(now)
+                    .createdAt(now)
+                    .updatedAt(now)
+                    .build();
+            FileTransferTask saved = fileTransferTaskGateway.save(task);
+            log.info("上传任务初始化完成: taskId={}, userId={}, storageSettingId={}, objectKey={}",
+                    saved.getTaskId(), saved.getUserId(), saved.getStorageSettingId(), saved.getObjectKey());
+            transferSseService.sendStatus(saved.getUserId(), saved.getTaskId(), saved.getStatus().name(), "任务已初始化");
+            return toDTO(saved);
+        } catch (RuntimeException e) {
+            uploadDestinationReservationService.release(taskId);
+            throw e;
+        }
     }
 
     @Override
@@ -94,6 +121,8 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
         if (task.getStatus() != TransferTaskStatus.initialized) {
             throw new BizException("任务状态不支持校验: " + task.getStatus());
         }
+        log.info("开始上传校验: taskId={}, userId={}, fileMd5={}", task.getTaskId(), task.getUserId(), command.getFileMd5());
+        uploadDestinationReservationService.touch(task.getTaskId());
         transferSseService.sendStatus(task.getUserId(), task.getTaskId(), TransferTaskStatus.checking.name(), "开始校验");
 
         var existed = fileRecordGateway.findByUserAndMd5(task.getUserId(), command.getFileMd5());
@@ -102,6 +131,7 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
             IStorageOperationService storageService = storageServiceFacade.getStorageService(source.getStorageSettingId());
             if (storageService.isFileExist(source.getObjectKey())) {
                 LocalDateTime now = LocalDateTime.now();
+                prepareUploadDestination(task);
                 FileRecord duplicated = FileRecord.builder()
                         .fileId(UUID.randomUUID().toString().replace("-", ""))
                         .objectKey(source.getObjectKey())
@@ -123,13 +153,18 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
 
                 fileTransferTaskGateway.save(task.toBuilder()
                         .fileMd5(command.getFileMd5())
+                        .fileId(duplicated.getFileId())
                         .uploadedChunks(task.getTotalChunks())
                         .uploadedSize(task.getFileSize())
                         .status(TransferTaskStatus.completed)
                         .completeTime(now)
                         .updatedAt(now)
+                        .overwriteExisting(task.getOverwriteExisting())
                         .build());
+                log.info("命中秒传: taskId={}, userId={}, fileId={}, overwriteExisting={}",
+                        task.getTaskId(), task.getUserId(), duplicated.getFileId(), task.getOverwriteExisting());
                 transferSseService.sendComplete(task.getUserId(), task.getTaskId(), "命中秒传");
+                uploadDestinationReservationService.release(task.getTaskId());
                 return CheckUploadResultDTO.builder()
                         .instantUpload(true)
                         .taskId(task.getTaskId())
@@ -145,6 +180,8 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
                 .updatedAt(LocalDateTime.now())
                 .build();
         fileTransferTaskGateway.save(checked);
+        log.info("秒传未命中，进入分片上传: taskId={}, userId={}, fileName={}, totalChunks={}",
+                task.getTaskId(), task.getUserId(), task.getFileName(), task.getTotalChunks());
         transferSseService.sendStatus(task.getUserId(), task.getTaskId(), TransferTaskStatus.uploading.name(), "进入上传中");
         return CheckUploadResultDTO.builder()
                 .instantUpload(false)
@@ -162,6 +199,9 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
         if (task.getStatus() != TransferTaskStatus.uploading) {
             throw new BizException("任务状态不支持上传分片: " + task.getStatus());
         }
+        log.debug("接收上传分片: taskId={}, userId={}, chunkIndex={}, chunkSize={}",
+                task.getTaskId(), task.getUserId(), command.getChunkIndex(), bytes == null ? 0 : bytes.length);
+        uploadDestinationReservationService.touch(task.getTaskId());
         Path chunkDir = chunkDir(task.getTaskId());
         try {
             Files.createDirectories(chunkDir);
@@ -184,7 +224,10 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
                 mergeChunks(merge);
             }
         } catch (IOException e) {
+            log.error("上传分片失败: taskId={}, userId={}, chunkIndex={}, message={}",
+                    task.getTaskId(), task.getUserId(), command.getChunkIndex(), e.getMessage(), e);
             fileTransferTaskGateway.updateStatus(task.getTaskId(), TransferTaskStatus.failed, e.getMessage());
+            uploadDestinationReservationService.release(task.getTaskId());
             throw new BizException("上传分片失败: " + e.getMessage());
         }
     }
@@ -194,10 +237,12 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
     public FileRecord mergeChunks(MergeChunksCommand command) {
         FileTransferTask task = fileTransferTaskGateway.findByTaskId(command.getTaskId())
                 .orElseThrow(() -> new BizException("传输任务不存在: " + command.getTaskId()));
+        uploadDestinationReservationService.touch(task.getTaskId());
         if (task.getStatus() == TransferTaskStatus.completed) {
             if (task.getFileId() == null || task.getFileId().isBlank()) {
                 throw new BizException("任务已完成，但未找到文件记录");
             }
+            uploadDestinationReservationService.release(task.getTaskId());
             return fileRecordGateway.findById(task.getFileId())
                     .orElseThrow(() -> new BizException("文件记录不存在: " + task.getFileId()));
         }
@@ -206,6 +251,8 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
         }
         Path chunkDir = chunkDir(task.getTaskId());
         try {
+            log.info("开始合并上传分片: taskId={}, userId={}, totalChunks={}, fileName={}",
+                    task.getTaskId(), task.getUserId(), task.getTotalChunks(), task.getFileName());
             transferSseService.sendStatus(task.getUserId(), task.getTaskId(), TransferTaskStatus.merging.name(), "开始合并");
             fileTransferTaskGateway.save(task.toBuilder().status(TransferTaskStatus.merging).updatedAt(LocalDateTime.now()).build());
             Path mergedTemp = chunkDir.resolve("merged.tmp");
@@ -222,6 +269,7 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
             }
             IStorageOperationService storageService = storageServiceFacade.getStorageService(task.getStorageSettingId());
             try (InputStream mergedInput = Files.newInputStream(mergedTemp)) {
+                prepareUploadDestination(task);
                 storageService.uploadFile(mergedInput, task.getObjectKey());
             }
             LocalDateTime now = LocalDateTime.now();
@@ -251,13 +299,21 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
                     .uploadedSize(task.getFileSize())
                     .updatedAt(now)
                     .build());
+            log.info("上传任务完成: taskId={}, userId={}, fileId={}, objectKey={}",
+                    task.getTaskId(), task.getUserId(), saved.getFileId(), task.getObjectKey());
             transferSseService.sendComplete(task.getUserId(), task.getTaskId(), "合并完成");
             Files.deleteIfExists(mergedTemp);
+            uploadDestinationReservationService.release(task.getTaskId());
             return saved;
-        } catch (IOException e) {
-            fileTransferTaskGateway.updateStatus(task.getTaskId(), TransferTaskStatus.failed, e.getMessage());
-            transferSseService.sendError(task.getUserId(), task.getTaskId(), "MERGE_FAILED", e.getMessage());
-            throw new BizException("分片合并失败: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("分片合并失败: taskId={}, userId={}, message={}", task.getTaskId(), task.getUserId(), e.getMessage(), e);
+            uploadDestinationReservationService.release(task.getTaskId());
+            if (e instanceof IOException) {
+                fileTransferTaskGateway.updateStatus(task.getTaskId(), TransferTaskStatus.failed, e.getMessage());
+                transferSseService.sendError(task.getUserId(), task.getTaskId(), "MERGE_FAILED", e.getMessage());
+                throw new BizException("分片合并失败: " + e.getMessage());
+            }
+            throw e instanceof RuntimeException runtimeException ? runtimeException : new BizException("分片合并失败: " + e.getMessage());
         }
     }
 
@@ -276,6 +332,8 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
         int totalChunks = (int) ((fileRecord.getSize() + chunkSize - 1) / chunkSize);
         String taskId = UUID.randomUUID().toString().replace("-", "");
         LocalDateTime now = LocalDateTime.now();
+        log.info("收到下载初始化请求: userId={}, fileId={}, fileName={}, fileSize={}, totalChunks={}, chunkSize={}",
+                command.getUserId(), fileRecord.getFileId(), fileRecord.getDisplayName(), fileRecord.getSize(), totalChunks, chunkSize);
         FileTransferTask task = FileTransferTask.builder()
                 .taskId(taskId)
                 .uploadId(taskId)
@@ -297,6 +355,8 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
                 .updatedAt(now)
                 .build();
         fileTransferTaskGateway.save(task);
+        log.info("下载任务初始化完成: taskId={}, userId={}, fileId={}, objectKey={}",
+                task.getTaskId(), task.getUserId(), task.getFileId(), task.getObjectKey());
         transferSseService.sendStatus(task.getUserId(), task.getTaskId(), TransferTaskStatus.initialized.name(), "任务已初始化");
         return InitDownloadResultDTO.builder()
                 .taskId(taskId)
@@ -316,6 +376,7 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
         deleteChunkDir(taskId);
         deleteDownloadChunkDir(taskId);
         transferSseService.sendStatus(task.getUserId(), taskId, TransferTaskStatus.canceled.name(), "任务已取消");
+        uploadDestinationReservationService.release(taskId);
     }
 
     @Override
@@ -347,6 +408,18 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
         return fileTransferTaskGateway.listByUserId(userId, statusType).stream()
                 .map(this::toDTO)
                 .toList();
+    }
+
+    @Override
+    public PageDTO<FileTransferTaskDTO> pageByUserId(String userId, Integer statusType, String keyword, long pageIndex, long pageSize) {
+        userId = resolveUserId(userId);
+        PageDTO<FileTransferTask> result = fileTransferTaskGateway.pageByUserId(userId, statusType, keyword, pageIndex, pageSize);
+        return PageDTO.<FileTransferTaskDTO>builder()
+                .total(result.getTotal())
+                .pageIndex(result.getPageIndex())
+                .pageSize(result.getPageSize())
+                .records(result.getRecords().stream().map(this::toDTO).toList())
+                .build();
     }
 
     @Override
@@ -388,6 +461,8 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
         } else if (task.getStatus() != TransferTaskStatus.downloading) {
             throw new BizException("任务状态不支持下载分片: " + task.getStatus());
         }
+        log.debug("接收下载分片请求: taskId={}, userId={}, chunkIndex={}, chunkSize={}",
+                task.getTaskId(), task.getUserId(), query.getChunkIndex(), task.getChunkSize());
         IStorageOperationService storageService = storageServiceFacade.getStorageService(task.getStorageSettingId());
         if (!storageService.isFileExist(task.getObjectKey())) {
             throw new BizException("文件不存在");
@@ -398,6 +473,7 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
                 throw new BizException("分片索引越界");
             }
             long end = Math.min(start + task.getChunkSize(), task.getFileSize());
+            log.debug("开始读取下载分片: taskId={}, chunkIndex={}, range=[{}, {}]", task.getTaskId(), query.getChunkIndex(), start, end - 1);
             byte[] chunk;
             try (InputStream in = storageService.downloadFileRange(task.getObjectKey(), start, end - 1)) {
                 chunk = in.readAllBytes();
@@ -416,10 +492,13 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
             transferSseService.sendProgress(task.getUserId(), task.getTaskId(), downloadedSize, task.getFileSize(), progressed, task.getTotalChunks());
             if (status == TransferTaskStatus.completed) {
                 deleteDownloadChunkDir(task.getTaskId());
+                log.info("下载任务完成: taskId={}, userId={}, fileId={}", task.getTaskId(), task.getUserId(), task.getFileId());
                 transferSseService.sendComplete(task.getUserId(), task.getTaskId(), "下载完成");
             }
             return chunk;
         } catch (IOException e) {
+            log.error("下载分片失败: taskId={}, userId={}, chunkIndex={}, message={}",
+                    task.getTaskId(), task.getUserId(), query.getChunkIndex(), e.getMessage(), e);
             fileTransferTaskGateway.updateStatus(task.getTaskId(), TransferTaskStatus.failed, e.getMessage());
             transferSseService.sendError(task.getUserId(), task.getTaskId(), "DOWNLOAD_FAILED", e.getMessage());
             throw new BizException("下载分片失败: " + e.getMessage());
@@ -495,6 +574,99 @@ public class FileTransferAppService implements FileTransferCommandUseCase, FileT
     private String suffix(String fileName) {
         int idx = fileName.lastIndexOf('.');
         return idx < 0 ? "" : fileName.substring(idx + 1);
+    }
+
+    private List<FileRecord> listActiveSiblingFiles(String userId, String parentId, String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            return List.of();
+        }
+        return fileRecordGateway.listByUserAndParentAndDeleted(userId, parentId, false).stream()
+                .filter(record -> fileName.equals(record.getDisplayName()) || fileName.equals(record.getOriginalName()))
+                .toList();
+    }
+
+    private void deleteRecordsWithPhysicalCleanup(List<FileRecord> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        List<String> fileIds = records.stream().map(FileRecord::getFileId).toList();
+        java.util.Map<String, String> deletions = new java.util.LinkedHashMap<>();
+        for (FileRecord record : records) {
+            String objectKey = record.getObjectKey();
+            if (objectKey == null || objectKey.isBlank()) {
+                continue;
+            }
+            if (fileRecordGateway.countByObjectKeyExcludingIds(objectKey, fileIds) == 0) {
+                deletions.putIfAbsent(objectKey, record.getStorageSettingId());
+            }
+        }
+        fileUserFavoriteGateway.deleteByUserAndFileIds(records.get(0).getUserId(), fileIds);
+        fileShareItemGateway.deleteByFileIds(fileIds);
+        fileRecordGateway.deleteByIds(fileIds);
+        Runnable cleanup = () -> {
+            for (java.util.Map.Entry<String, String> entry : deletions.entrySet()) {
+                try {
+                    storageServiceFacade.getStorageService(entry.getValue()).deleteFile(entry.getKey());
+                } catch (Exception ignored) {
+                    // 物理删除失败不影响替换结果
+                }
+            }
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    cleanup.run();
+                }
+            });
+        } else {
+            cleanup.run();
+        }
+    }
+
+    private void prepareUploadDestination(FileTransferTask task) {
+        List<FileRecord> siblings = listActiveSiblingFiles(task.getUserId(), task.getParentId(), task.getFileName());
+        if (siblings.isEmpty()) {
+            return;
+        }
+        java.util.LinkedHashMap<String, FileRecord> recordsToDelete = new java.util.LinkedHashMap<>();
+        for (FileRecord sibling : siblings) {
+            if (Boolean.TRUE.equals(sibling.getIsDir())) {
+                collectActiveRecursiveRecords(task.getUserId(), sibling.getFileId(), recordsToDelete);
+            } else {
+                recordsToDelete.putIfAbsent(sibling.getFileId(), sibling);
+            }
+        }
+        if (recordsToDelete.isEmpty()) {
+            return;
+        }
+        log.warn("目标目录存在同名资源，上传前执行替换: userId={}, parentId={}, fileName={}, conflictCount={}",
+                task.getUserId(), task.getParentId(), task.getFileName(), recordsToDelete.size());
+        deleteRecordsWithPhysicalCleanup(new java.util.ArrayList<>(recordsToDelete.values()));
+    }
+
+    private void collectActiveRecursiveRecords(String userId,
+                                               String fileId,
+                                               java.util.LinkedHashMap<String, FileRecord> recordsToDelete) {
+        if (fileId == null || fileId.isBlank() || recordsToDelete.containsKey(fileId)) {
+            return;
+        }
+        FileRecord current = fileRecordGateway.findById(fileId).orElse(null);
+        if (current == null || !userId.equals(current.getUserId()) || Boolean.TRUE.equals(current.getIsDeleted())) {
+            return;
+        }
+        recordsToDelete.put(fileId, current);
+        if (!Boolean.TRUE.equals(current.getIsDir())) {
+            return;
+        }
+        List<FileRecord> children = fileRecordGateway.listByUserAndParentAndDeleted(userId, fileId, false);
+        for (FileRecord child : children) {
+            collectActiveRecursiveRecords(userId, child.getFileId(), recordsToDelete);
+        }
+    }
+
+    private boolean resolveOverwriteExisting(Boolean overwriteExisting) {
+        return overwriteExisting == null || overwriteExisting;
     }
 
     private Path chunkDir(String taskId) {

@@ -5,7 +5,6 @@ import lombok.Data;
 
 @Data
 public class InitDownloadCommand {
-    @NotBlank
     private String userId;
     @NotBlank
     private String fileId;

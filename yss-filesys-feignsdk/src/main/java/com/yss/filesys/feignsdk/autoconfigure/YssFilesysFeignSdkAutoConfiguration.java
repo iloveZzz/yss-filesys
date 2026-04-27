@@ -1,5 +1,6 @@
 package com.yss.filesys.feignsdk.autoconfigure;
 
+import com.yss.filesys.feignsdk.client.YssFilesysFileFeignClient;
 import com.yss.filesys.feignsdk.client.YssFilesysTransferFeignClient;
 import com.yss.filesys.feignsdk.service.YssFilesysTransferSdkService;
 import com.yss.filesys.feignsdk.properties.YssFilesysFeignSdkProperties;
@@ -15,7 +16,10 @@ import org.springframework.context.annotation.ComponentScan;
 @AutoConfiguration
 @ConditionalOnProperty(prefix = "yss.filesys.feignsdk", name = "enabled", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(YssFilesysFeignSdkProperties.class)
-@EnableFeignClients(clients = YssFilesysTransferFeignClient.class)
+@EnableFeignClients(clients = {
+        YssFilesysTransferFeignClient.class,
+        YssFilesysFileFeignClient.class
+})
 @ComponentScan(basePackageClasses = YssFilesysTransferSdkService.class)
 public class YssFilesysFeignSdkAutoConfiguration {
 }

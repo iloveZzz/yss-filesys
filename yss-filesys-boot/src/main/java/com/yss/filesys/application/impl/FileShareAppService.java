@@ -94,16 +94,16 @@ public class FileShareAppService implements FileShareCommandUseCase, FileShareQu
     }
 
     @Override
-    public PageDTO<FileShareDTO> pageByUserId(String userId, long pageNo, long pageSize) {
+    public PageDTO<FileShareDTO> pageByUserId(String userId, long pageIndex, long pageSize) {
         userId = resolveUserId(userId);
         List<FileShareDTO> all = fileShareGateway.listByUserId(userId).stream().map(this::toDTO).toList();
         long total = all.size();
-        int from = (int) Math.max(0, (pageNo - 1) * pageSize);
+        int from = (int) Math.max(0, pageIndex * pageSize);
         int to = (int) Math.min(total, from + pageSize);
         List<FileShareDTO> records = from >= to ? List.of() : all.subList(from, to);
         return PageDTO.<FileShareDTO>builder()
                 .total(total)
-                .pageNo(pageNo)
+                .pageIndex(pageIndex)
                 .pageSize(pageSize)
                 .records(records)
                 .build();

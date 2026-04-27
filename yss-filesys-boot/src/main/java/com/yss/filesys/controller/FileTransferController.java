@@ -8,12 +8,14 @@ import com.yss.filesys.application.command.UploadChunkCommand;
 import com.yss.filesys.application.dto.CheckUploadResultDTO;
 import com.yss.filesys.application.dto.FileTransferTaskDTO;
 import com.yss.filesys.application.dto.FileTransferStatsDTO;
+import com.yss.filesys.application.dto.PageDTO;
 import com.yss.filesys.application.dto.InitDownloadResultDTO;
 import com.yss.filesys.application.port.FileTransferCommandUseCase;
 import com.yss.filesys.application.port.FileTransferQueryUseCase;
 import com.yss.filesys.application.query.DownloadChunkQuery;
 import com.yss.filesys.common.AnonymousUserContext;
 import com.yss.cloud.dto.response.MultiResult;
+import com.yss.cloud.dto.response.PageResult;
 import com.yss.cloud.dto.response.SingleResult;
 import com.yss.filesys.domain.model.FileRecord;
 import com.yss.filesys.service.TransferSseService;
@@ -34,6 +36,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Set;
@@ -47,6 +50,7 @@ import java.util.Set;
 @RestController
 @RequestMapping("/transfers")
 @Tag(name = "文件传输")
+@Slf4j
 public class FileTransferController {
 
     /**
@@ -90,6 +94,14 @@ public class FileTransferController {
     @Operation(summary = "初始化上传任务")
     public SingleResult<FileTransferTaskDTO> initUpload(@Valid @RequestBody InitTransferUploadCommand command) {
         command.setUserId(AnonymousUserContext.userId());
+        log.info("接收上传初始化请求: userId={}, parentId={}, fileName={}, fileSize={}, totalChunks={}, chunkSize={}, overwriteExisting={}",
+                command.getUserId(),
+                command.getParentId(),
+                command.getFileName(),
+                command.getFileSize(),
+                command.getTotalChunks(),
+                command.getChunkSize(),
+                command.getOverwriteExisting());
         return SingleResult.of(fileTransferCommandUseCase.initUpload(command));
     }
 
@@ -102,6 +114,7 @@ public class FileTransferController {
     @PostMapping("/upload/check")
     @Operation(summary = "上传前 MD5 校验")
     public SingleResult<CheckUploadResultDTO> checkUpload(@Valid @RequestBody CheckUploadCommand command) {
+        log.info("接收上传校验请求: taskId={}, fileMd5={}", command.getTaskId(), command.getFileMd5());
         return SingleResult.of(fileTransferCommandUseCase.checkUpload(command));
     }
 
@@ -121,6 +134,8 @@ public class FileTransferController {
                                           @RequestParam("taskId") String taskId,
                                           @RequestParam("chunkIndex") Integer chunkIndex,
                                           @RequestParam(value = "chunkMd5", required = false) String chunkMd5) throws Exception {
+        log.debug("接收上传分片请求: taskId={}, chunkIndex={}, chunkMd5={}, chunkSize={}",
+                taskId, chunkIndex, chunkMd5, file == null ? 0 : file.getSize());
         UploadChunkCommand command = new UploadChunkCommand();
         command.setTaskId(taskId);
         command.setChunkIndex(chunkIndex);
@@ -138,6 +153,7 @@ public class FileTransferController {
     @PostMapping("/upload/merge")
     @Operation(summary = "手动触发合并")
     public SingleResult<FileRecord> merge(@Valid @RequestBody MergeChunksCommand command) {
+        log.info("接收合并分片请求: taskId={}", command.getTaskId());
         return SingleResult.of(fileTransferCommandUseCase.mergeChunks(command));
     }
 
@@ -151,6 +167,8 @@ public class FileTransferController {
     @Operation(summary = "初始化下载任务")
     public SingleResult<InitDownloadResultDTO> initDownload(@Valid @RequestBody InitDownloadCommand command) {
         command.setUserId(AnonymousUserContext.userId());
+        log.info("接收下载初始化请求: userId={}, fileId={}, chunkSize={}",
+                command.getUserId(), command.getFileId(), command.getChunkSize());
         return SingleResult.of(fileTransferCommandUseCase.initDownload(command));
     }
 
@@ -163,6 +181,7 @@ public class FileTransferController {
     @GetMapping("/download/chunk")
     @Operation(summary = "下载分片")
     public ResponseEntity<byte[]> downloadChunk(@Valid DownloadChunkQuery query) {
+        log.debug("接收下载分片请求: taskId={}, chunkIndex={}", query.getTaskId(), query.getChunkIndex());
         byte[] bytes = fileTransferQueryUseCase.downloadChunk(query);
         return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
@@ -176,6 +195,7 @@ public class FileTransferController {
     @PostMapping("/pause/{taskId}")
     @Operation(summary = "暂停传输任务")
     public SingleResult<Void> pause(@PathVariable String taskId) {
+        log.info("接收暂停任务请求: taskId={}", taskId);
         fileTransferCommandUseCase.pause(taskId);
         return SingleResult.buildSuccess();
     }
@@ -186,6 +206,7 @@ public class FileTransferController {
     @PostMapping("/resume/{taskId}")
     @Operation(summary = "恢复传输任务")
     public SingleResult<Void> resume(@PathVariable String taskId) {
+        log.info("接收恢复任务请求: taskId={}", taskId);
         fileTransferCommandUseCase.resume(taskId);
         return SingleResult.buildSuccess();
     }
@@ -199,6 +220,7 @@ public class FileTransferController {
     @DeleteMapping("/{taskId}")
     @Operation(summary = "取消传输任务")
     public SingleResult<Void> cancelFileTransfer(@PathVariable String taskId) {
+        log.info("接收取消任务请求: taskId={}", taskId);
         fileTransferCommandUseCase.cancel(taskId);
         return SingleResult.buildSuccess();
     }
@@ -211,6 +233,25 @@ public class FileTransferController {
     @Operation(summary = "按用户查询传输任务")
     public MultiResult<FileTransferTaskDTO> listFileTransfersByUser(@RequestParam(required = false) Integer statusType) {
         return MultiResult.of(fileTransferQueryUseCase.listByUserId(AnonymousUserContext.userId(), statusType));
+    }
+
+    /**
+     * 分页查询已完成传输任务
+     */
+    @GetMapping("/pages")
+    @Operation(summary = "分页查询已完成传输任务")
+    public PageResult<FileTransferTaskDTO> pageFileTransfersByUser(@RequestParam(defaultValue = "3") Integer statusType,
+                                                                    @RequestParam(required = false) String keyword,
+                                                                    @RequestParam(defaultValue = "0") long pageIndex,
+                                                                    @RequestParam(defaultValue = "20") long pageSize) {
+        PageDTO<FileTransferTaskDTO> result = fileTransferQueryUseCase.pageByUserId(
+                AnonymousUserContext.userId(),
+                statusType,
+                keyword,
+                pageIndex,
+                pageSize
+        );
+        return PageResult.of(result.getRecords(), result.getTotal(), Math.toIntExact(result.getPageSize()), Math.toIntExact(result.getPageIndex()));
     }
 
     /**

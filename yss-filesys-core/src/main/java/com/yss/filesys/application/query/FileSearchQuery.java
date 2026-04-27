@@ -15,6 +15,8 @@ public class FileSearchQuery {
     private Boolean isDir;
     private Boolean isRecents;
     private Collection<String> fileIds;
-    private long pageNo = 1;
+    private String sortField;
+    private String sortOrder;
+    private long pageIndex = 0;
     private long pageSize = 20;
 }

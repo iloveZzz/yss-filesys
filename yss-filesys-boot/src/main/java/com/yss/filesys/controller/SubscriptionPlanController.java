@@ -52,7 +52,7 @@ public class SubscriptionPlanController {
     @Operation(summary = "分页获取套餐列表")
     public PageResult<SubscriptionPlanDTO> listSubscriptionPlanPages(SubscriptionPlanPageQuery query) {
         com.yss.filesys.application.dto.PageDTO<SubscriptionPlanDTO> result = subscriptionPlanAppService.page(query);
-        return PageResult.of(result.getRecords(), result.getTotal(), result.getPageSize(), result.getPageNo());
+        return PageResult.of(result.getRecords(), result.getTotal(), result.getPageSize(), result.getPageIndex());
     }
 
     /**

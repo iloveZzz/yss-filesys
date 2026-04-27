@@ -95,10 +95,10 @@ public class FileShareController {
      */
     @GetMapping("/pages")
     @Operation(summary = "分页查询分享")
-    public PageResult<FileShareDTO> pageFileSharesByUser(@RequestParam(defaultValue = "1") long pageNo,
+    public PageResult<FileShareDTO> pageFileSharesByUser(@RequestParam(defaultValue = "0") long pageIndex,
                                                @RequestParam(defaultValue = "20") long pageSize) {
-        com.yss.filesys.application.dto.PageDTO<FileShareDTO> result = fileShareQueryUseCase.pageByUserId(AnonymousUserContext.userId(), pageNo, pageSize);
-        return PageResult.of(result.getRecords(), result.getTotal(), Math.toIntExact(result.getPageSize()), Math.toIntExact(result.getPageNo()));
+        com.yss.filesys.application.dto.PageDTO<FileShareDTO> result = fileShareQueryUseCase.pageByUserId(AnonymousUserContext.userId(), pageIndex, pageSize);
+        return PageResult.of(result.getRecords(), result.getTotal(), Math.toIntExact(result.getPageSize()), Math.toIntExact(result.getPageIndex()));
     }
 
     /**

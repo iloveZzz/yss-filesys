@@ -7,6 +7,9 @@ import java.time.LocalDateTime;
 
 /**
  * 文件记录信息。
+ * <p>
+ * 代表文件、目录和回收站记录在 SDK 层的统一传输模型。
+ * </p>
  */
 @Value
 @Builder

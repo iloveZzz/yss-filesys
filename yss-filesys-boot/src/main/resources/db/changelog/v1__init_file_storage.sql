@@ -109,6 +109,12 @@ CREATE TABLE IF NOT EXISTS file_transfer_task (
   KEY idx_file_transfer_task_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='传输任务表';
 
+-- changeset codex:12
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'file_transfer_task' AND column_name = 'overwrite_existing'
+ALTER TABLE file_transfer_task
+  ADD COLUMN overwrite_existing tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否覆盖同目录下同名文件' AFTER uploaded_size;
+
 -- changeset codex:7
 CREATE TABLE IF NOT EXISTS file_user_favorites (
   user_id varchar(128) NOT NULL COMMENT '用户ID',

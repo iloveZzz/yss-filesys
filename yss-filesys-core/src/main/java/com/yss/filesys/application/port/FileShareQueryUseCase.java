@@ -12,7 +12,7 @@ public interface FileShareQueryUseCase {
 
     List<FileShareDTO> listByUserId(String userId);
 
-    PageDTO<FileShareDTO> pageByUserId(String userId, long pageNo, long pageSize);
+    PageDTO<FileShareDTO> pageByUserId(String userId, long pageIndex, long pageSize);
 
     FileShareDTO getById(String shareId);
 

@@ -10,7 +10,6 @@ public class UpsertStorageSettingCommand {
     private String platformIdentifier;
     @NotBlank
     private String configData;
-    @NotBlank
     private String userId;
     private String remark;
     private Integer enabled;

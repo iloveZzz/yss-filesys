@@ -8,7 +8,6 @@ import java.util.List;
 
 @Data
 public class PermanentlyDeleteRecycleCommand {
-    @NotBlank
     private String userId;
 
     @NotEmpty

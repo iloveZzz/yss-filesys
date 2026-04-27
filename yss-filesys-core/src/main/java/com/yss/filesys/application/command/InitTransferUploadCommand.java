@@ -6,7 +6,6 @@ import lombok.Data;
 
 @Data
 public class InitTransferUploadCommand {
-    @NotBlank
     private String userId;
     @NotBlank
     private String fileName;
@@ -20,4 +19,5 @@ public class InitTransferUploadCommand {
     @NotBlank
     private String mimeType;
     private String storageSettingId;
+    private Boolean overwriteExisting = Boolean.TRUE;
 }

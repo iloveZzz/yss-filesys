@@ -46,6 +46,8 @@ public class FileTransferTaskPO {
     private Long chunkSize;
     @TableField("uploaded_size")
     private Long uploadedSize;
+    @TableField("overwrite_existing")
+    private Boolean overwriteExisting;
     private String status;
     @TableField("error_msg")
     private String errorMsg;

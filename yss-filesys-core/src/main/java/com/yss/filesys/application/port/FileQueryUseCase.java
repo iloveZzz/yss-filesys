@@ -23,6 +23,15 @@ public interface FileQueryUseCase {
     FileDownloadDTO downloadFile(String fileId, String userId);
 
     /**
+     * 按目录和文件名称下载文件
+     * @param parentId 目录ID
+     * @param fileName 文件名称
+     * @param userId 用户ID
+     * @return 文件下载DTO
+     */
+    FileDownloadDTO downloadFileByParentAndName(String parentId, String fileName, String userId);
+
+    /**
      * 批量下载文件
      * @param fileIds 文件ID列表
      * @param userId 用户ID

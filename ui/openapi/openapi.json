@@ -1,0 +1,5810 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Refactored free-fs with a subject-match-java style layered architecture.",
+    "version": "v1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://192.168.164.18:30067"
+    }
+  ],
+  "tags": [
+    {
+      "name": "SharePageController",
+      "description": "分享页面控制器\n&lt;p&gt;\n提供分享页面渲染接口，返回 Thymeleaf 模板页面\n&lt;/p&gt;"
+    },
+    {
+      "name": "StorageController",
+      "description": "存储平台配置控制器\n&lt;p&gt;\n提供存储平台查询、存储配置管理等接口\n&lt;/p&gt;"
+    },
+    {
+      "name": "FileShareController",
+      "description": "文件分享控制器\n&lt;p&gt;\n提供文件分享的创建、查询、取消及访问记录等接口\n&lt;/p&gt;"
+    },
+    {
+      "name": "StorageFormController",
+      "description": "StorageFormController"
+    },
+    {
+      "name": "FileHomeController",
+      "description": "文件首页控制器\n&lt;p&gt;\n提供文件首页统计信息接口\n&lt;/p&gt;"
+    },
+    {
+      "name": "FilePreviewController",
+      "description": "文件预览控制器\n&lt;p&gt;\n提供文件预览令牌签发和预览信息获取接口\n&lt;/p&gt;"
+    },
+    {
+      "name": "FileStreamController",
+      "description": "文件流控制器\n&lt;p&gt;\n提供文件流式传输接口，支持断点续传和压缩包内文件流传输\n&lt;/p&gt;"
+    },
+    {
+      "name": "FileTransferController",
+      "description": "文件传输控制器\n&lt;p&gt;\n提供文件分片上传、下载、传输进度订阅等接口\n&lt;/p&gt;"
+    },
+    {
+      "name": "SubscriptionPlanController",
+      "description": "套餐管理控制器\n&lt;p&gt;\n提供套餐的增删改查接口\n&lt;/p&gt;"
+    },
+    {
+      "name": "FileController",
+      "description": "文件管理控制器\n&lt;p&gt;\n提供文件的增删改查、目录管理、回收站管理、收藏功能等接口\n&lt;/p&gt;"
+    },
+    {
+      "name": "PreviewPageController",
+      "description": "预览页面控制器\n&lt;p&gt;\n提供文件预览页面渲染接口，返回 Thymeleaf 模板页面\n&lt;/p&gt;"
+    }
+  ],
+  "paths": {
+    "/share/{shareId}": {
+      "get": {
+        "summary": "分享页面",
+        "deprecated": false,
+        "tags": [
+          "SharePageController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "renderFileSharePage",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "分享ID",
+            "required": true,
+            "name": "shareId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "提取码（可选）",
+            "required": false,
+            "name": "shareCode"
+          }
+        ]
+      }
+    },
+    "/files/home": {
+      "get": {
+        "summary": "获取文件首页统计信息",
+        "deprecated": false,
+        "tags": [
+          "FileHomeController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultFileHomeDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getFileHomeStats",
+        "parameters": [
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "example": 0,
+            "name": "unit"
+          },
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "example": 0,
+            "name": "dateType"
+          }
+        ]
+      }
+    },
+    "/files/stream/{fileId}": {
+      "get": {
+        "summary": "文件流式传输\n<p>\n支持断点续传，通过 Range 请求头实现\n</p>",
+        "deprecated": false,
+        "tags": [
+          "FileStreamController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "operationId": "streamFile",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "文件ID",
+            "required": true,
+            "name": "fileId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "预览令牌",
+            "required": true,
+            "name": "previewToken"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "header",
+            "description": "Range请求头",
+            "required": false,
+            "example": "",
+            "name": "Range"
+          }
+        ]
+      }
+    },
+    "/files/archive/stream/{archiveFileId}": {
+      "get": {
+        "summary": "压缩包内文件流式传输",
+        "deprecated": false,
+        "tags": [
+          "FileStreamController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "operationId": "streamArchiveFile",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "压缩包文件ID",
+            "required": true,
+            "name": "archiveFileId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "压缩包内文件路径",
+            "required": true,
+            "name": "innerPath"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "预览令牌",
+            "required": true,
+            "name": "previewToken"
+          }
+        ]
+      }
+    },
+    "/preview/token/{fileId}": {
+      "post": {
+        "summary": "获取预览令牌",
+        "deprecated": false,
+        "tags": [
+          "FilePreviewController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultString"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "issueFilePreviewToken",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "文件ID",
+            "required": true,
+            "name": "fileId"
+          }
+        ]
+      }
+    },
+    "/preview/{fileId}": {
+      "get": {
+        "summary": "获取预览信息",
+        "deprecated": false,
+        "tags": [
+          "FilePreviewController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultFilePreviewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getFilePreviewInfo",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "文件ID",
+            "required": true,
+            "name": "fileId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "预览令牌",
+            "required": true,
+            "name": "previewToken"
+          }
+        ]
+      }
+    },
+    "/preview/archive/token/{archiveFileId}": {
+      "post": {
+        "summary": "获取压缩包内文件预览令牌",
+        "deprecated": false,
+        "tags": [
+          "FilePreviewController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultString"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "issueArchiveFilePreviewToken",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "压缩包文件ID",
+            "required": true,
+            "name": "archiveFileId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "压缩包内文件路径",
+            "required": true,
+            "name": "innerPath"
+          }
+        ]
+      }
+    },
+    "/preview/archive/{archiveFileId}": {
+      "get": {
+        "summary": "获取压缩包内文件预览信息",
+        "deprecated": false,
+        "tags": [
+          "FilePreviewController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultFilePreviewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getArchiveFilePreviewInfo",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "压缩包文件ID",
+            "required": true,
+            "name": "archiveFileId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "压缩包内文件路径",
+            "required": true,
+            "name": "innerPath"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "预览令牌",
+            "required": true,
+            "name": "previewToken"
+          }
+        ]
+      }
+    },
+    "/storage/forms": {
+      "get": {
+        "summary": "listStorageFormTemplates",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "StorageFormController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultStorageFormTemplateDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listStorageFormTemplates",
+        "parameters": []
+      }
+    },
+    "/storage/forms/{identifier}": {
+      "get": {
+        "summary": "getStorageFormTemplateByIdentifier",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "StorageFormController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultStorageFormTemplateDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getStorageFormTemplateByIdentifier",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "No comments found.",
+            "required": true,
+            "name": "identifier"
+          }
+        ]
+      }
+    },
+    "/transfers/subscribe": {
+      "get": {
+        "summary": "订阅传输进度（SSE）",
+        "deprecated": false,
+        "tags": [
+          "FileTransferController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SseEmitter"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "subscribe",
+        "parameters": []
+      }
+    },
+    "/transfers/upload/init": {
+      "post": {
+        "summary": "初始化上传任务",
+        "deprecated": false,
+        "tags": [
+          "FileTransferController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitTransferUploadCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultFileTransferTaskDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "initUpload",
+        "parameters": []
+      }
+    },
+    "/transfers/upload/check": {
+      "post": {
+        "summary": "上传前 MD5 校验",
+        "deprecated": false,
+        "tags": [
+          "FileTransferController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckUploadCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultCheckUploadResultDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "checkUpload",
+        "parameters": []
+      }
+    },
+    "/transfers/upload/chunk": {
+      "post": {
+        "summary": "上传分片",
+        "deprecated": false,
+        "tags": [
+          "FileTransferController"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "description": "分片文件",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "uploadChunk",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "任务ID",
+            "required": true,
+            "name": "taskId"
+          },
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "分片索引",
+            "required": true,
+            "example": 0,
+            "name": "chunkIndex"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "分片MD5（可选）",
+            "required": false,
+            "name": "chunkMd5"
+          }
+        ]
+      }
+    },
+    "/transfers/upload/merge": {
+      "post": {
+        "summary": "手动触发合并",
+        "deprecated": false,
+        "tags": [
+          "FileTransferController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeChunksCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultFileRecord"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "merge",
+        "parameters": []
+      }
+    },
+    "/transfers/download/init": {
+      "post": {
+        "summary": "初始化下载任务",
+        "deprecated": false,
+        "tags": [
+          "FileTransferController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitDownloadCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultInitDownloadResultDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "initDownload",
+        "parameters": []
+      }
+    },
+    "/transfers/download/chunk": {
+      "get": {
+        "summary": "下载分片",
+        "deprecated": false,
+        "tags": [
+          "FileTransferController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/defaultPrimitive"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "downloadChunk",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": true,
+            "name": "taskId"
+          },
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "No comments found.\nValidation[Min(value=0)]",
+            "required": true,
+            "example": 0,
+            "name": "chunkIndex"
+          }
+        ]
+      }
+    },
+    "/transfers/pause/{taskId}": {
+      "post": {
+        "summary": "暂停传输任务",
+        "deprecated": false,
+        "tags": [
+          "FileTransferController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "pause",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "No comments found.",
+            "required": true,
+            "name": "taskId"
+          }
+        ]
+      }
+    },
+    "/transfers/resume/{taskId}": {
+      "post": {
+        "summary": "恢复传输任务",
+        "deprecated": false,
+        "tags": [
+          "FileTransferController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "resume",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "No comments found.",
+            "required": true,
+            "name": "taskId"
+          }
+        ]
+      }
+    },
+    "/transfers/{taskId}": {
+      "get": {
+        "summary": "查询传输任务详情",
+        "deprecated": false,
+        "tags": [
+          "FileTransferController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultFileTransferTaskDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getFileTransferByTaskId",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "任务ID",
+            "required": true,
+            "name": "taskId"
+          }
+        ]
+      },
+      "delete": {
+        "summary": "取消传输任务",
+        "deprecated": false,
+        "tags": [
+          "FileTransferController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "cancelFileTransfer",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "任务ID",
+            "required": true,
+            "name": "taskId"
+          }
+        ]
+      }
+    },
+    "/transfers": {
+      "get": {
+        "summary": "按用户查询传输任务列表",
+        "deprecated": false,
+        "tags": [
+          "FileTransferController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultFileTransferTaskDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listFileTransfersByUser",
+        "parameters": [
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "example": 0,
+            "name": "statusType"
+          }
+        ]
+      }
+    },
+    "/transfers/files": {
+      "get": {
+        "summary": "按用户查询传输任务列表",
+        "deprecated": false,
+        "tags": [
+          "FileTransferController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultFileTransferTaskDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listFileTransfersByUser_1",
+        "parameters": [
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "example": 0,
+            "name": "statusType"
+          }
+        ]
+      }
+    },
+    "/transfers/pages": {
+      "get": {
+        "summary": "分页查询已完成传输任务",
+        "deprecated": false,
+        "tags": [
+          "FileTransferController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResultFileTransferTaskDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "pageFileTransfersByUser",
+        "parameters": [
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": true,
+            "example": 3,
+            "name": "statusType"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "name": "keyword"
+          },
+          {
+            "schema": {
+              "format": "int64",
+              "type": "number"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": true,
+            "example": 0,
+            "name": "pageIndex"
+          },
+          {
+            "schema": {
+              "format": "int64",
+              "type": "number"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": true,
+            "example": 20,
+            "name": "pageSize"
+          }
+        ]
+      }
+    },
+    "/transfers/stats": {
+      "get": {
+        "summary": "查询传输统计",
+        "deprecated": false,
+        "tags": [
+          "FileTransferController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultFileTransferStatsDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "stats",
+        "parameters": []
+      }
+    },
+    "/transfers/chunks/{taskId}": {
+      "get": {
+        "summary": "查询已上传分片",
+        "deprecated": false,
+        "tags": [
+          "FileTransferController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultInteger"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getUploadedChunks",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "No comments found.",
+            "required": true,
+            "name": "taskId"
+          }
+        ]
+      }
+    },
+    "/transfers/download/chunks/{taskId}": {
+      "get": {
+        "summary": "查询已下载分片",
+        "deprecated": false,
+        "tags": [
+          "FileTransferController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultInteger"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getDownloadedChunks",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "No comments found.",
+            "required": true,
+            "name": "taskId"
+          }
+        ]
+      }
+    },
+    "/transfers/clears": {
+      "delete": {
+        "summary": "清理已完成传输任务",
+        "deprecated": false,
+        "tags": [
+          "FileTransferController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "clearFinishedFileTransfers",
+        "parameters": []
+      }
+    },
+    "/storage/platforms": {
+      "get": {
+        "summary": "查询存储平台列表",
+        "deprecated": false,
+        "tags": [
+          "StorageController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultStoragePlatformDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listStoragePlatforms",
+        "parameters": []
+      }
+    },
+    "/storage/platform/{identifier}": {
+      "get": {
+        "summary": "根据标识符查询存储平台",
+        "deprecated": false,
+        "tags": [
+          "StorageController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultStoragePlatformDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getStoragePlatformByIdentifier",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "No comments found.",
+            "required": true,
+            "name": "identifier"
+          }
+        ]
+      }
+    },
+    "/storage/settings": {
+      "post": {
+        "summary": "新增或更新存储配置",
+        "deprecated": false,
+        "tags": [
+          "StorageController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertStorageSettingCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultStorageSettingDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "upsertStorageSetting",
+        "parameters": []
+      },
+      "get": {
+        "summary": "按用户查询存储配置列表",
+        "deprecated": false,
+        "tags": [
+          "StorageController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultStorageSettingDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listStorageSettings",
+        "parameters": []
+      }
+    },
+    "/storage/active-platforms": {
+      "get": {
+        "summary": "获取已启用存储配置列表",
+        "deprecated": false,
+        "tags": [
+          "StorageController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultStorageActivePlatformDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listActiveStoragePlatforms",
+        "parameters": []
+      }
+    },
+    "/storage/capacity": {
+      "get": {
+        "summary": "获取存储容量统计",
+        "deprecated": false,
+        "tags": [
+          "StorageController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultStorageCapacityDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getStorageCapacity",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "name": "settingId"
+          }
+        ]
+      }
+    },
+    "/storage/settings/{id}/status/{enabled}": {
+      "put": {
+        "summary": "启用或禁用存储配置",
+        "deprecated": false,
+        "tags": [
+          "StorageController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "updateStorageSettingStatus",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "配置ID",
+            "required": true,
+            "name": "id"
+          },
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "path",
+            "description": "是否启用（1启用，0禁用）",
+            "required": true,
+            "example": 0,
+            "name": "enabled"
+          }
+        ]
+      }
+    },
+    "/storage/settings/{id}": {
+      "delete": {
+        "summary": "删除存储配置",
+        "deprecated": false,
+        "tags": [
+          "StorageController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteStorageSetting",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "No comments found.",
+            "required": true,
+            "name": "id"
+          }
+        ]
+      }
+    },
+    "/files": {
+      "get": {
+        "summary": "分页查询文件",
+        "deprecated": false,
+        "tags": [
+          "FileController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResultFileRecordDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "search",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "父目录ID",
+            "required": false,
+            "name": "parentId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "搜索关键词",
+            "required": false,
+            "name": "keyword"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "name": "fileType"
+          },
+          {
+            "schema": {
+              "format": "boolean",
+              "type": "boolean"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "example": true,
+            "name": "isDir"
+          },
+          {
+            "schema": {
+              "format": "boolean",
+              "type": "boolean"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "example": true,
+            "name": "isRecents"
+          },
+          {
+            "schema": {
+              "format": "boolean",
+              "type": "boolean"
+            },
+            "in": "query",
+            "description": "是否已删除",
+            "required": false,
+            "example": true,
+            "name": "deleted"
+          },
+          {
+            "schema": {
+              "format": "boolean",
+              "type": "boolean"
+            },
+            "in": "query",
+            "description": "是否收藏",
+            "required": false,
+            "example": true,
+            "name": "favorite"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "排序字段",
+            "required": false,
+            "name": "sortField"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "排序方向",
+            "required": false,
+            "name": "sortOrder"
+          },
+          {
+            "schema": {
+              "format": "int64",
+              "type": "number"
+            },
+            "in": "query",
+            "description": "页索引",
+            "required": true,
+            "example": 0,
+            "name": "pageIndex"
+          },
+          {
+            "schema": {
+              "format": "int64",
+              "type": "number"
+            },
+            "in": "query",
+            "description": "每页大小",
+            "required": true,
+            "example": 20,
+            "name": "pageSize"
+          }
+        ]
+      }
+    },
+    "/files/{fileId}": {
+      "get": {
+        "summary": "查询文件详情",
+        "deprecated": false,
+        "tags": [
+          "FileController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultFileRecordDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getFileById",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "文件ID",
+            "required": true,
+            "name": "fileId"
+          }
+        ]
+      }
+    },
+    "/files/directory": {
+      "post": {
+        "summary": "创建目录",
+        "deprecated": false,
+        "tags": [
+          "FileController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDirectoryCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultFileRecordDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "createDirectory",
+        "parameters": []
+      }
+    },
+    "/files/dirs": {
+      "get": {
+        "summary": "查询目录列表",
+        "deprecated": false,
+        "tags": [
+          "FileController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultDirectoryTreeDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listDirs",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "父目录ID",
+            "required": false,
+            "name": "parentId"
+          }
+        ]
+      }
+    },
+    "/files/{fileId}/rename": {
+      "put": {
+        "summary": "文件重命名",
+        "deprecated": false,
+        "tags": [
+          "FileController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameFileCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "renameFile",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "文件ID",
+            "required": true,
+            "name": "fileId"
+          }
+        ]
+      }
+    },
+    "/files/moves": {
+      "put": {
+        "summary": "文件移动",
+        "deprecated": false,
+        "tags": [
+          "FileController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveFileCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "moveFile",
+        "parameters": []
+      }
+    },
+    "/files/directory/{dirId}/path": {
+      "get": {
+        "summary": "获取目录层级路径",
+        "deprecated": false,
+        "tags": [
+          "FileController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultFileRecordDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getDirectoryTreePath",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "目录ID",
+            "required": true,
+            "name": "dirId"
+          }
+        ]
+      }
+    },
+    "/files/url/{fileId}": {
+      "get": {
+        "summary": "获取文件URL",
+        "deprecated": false,
+        "tags": [
+          "FileController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultString"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getFileUrl",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "No comments found.",
+            "required": true,
+            "name": "fileId"
+          },
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "example": 0,
+            "name": "expireSeconds"
+          }
+        ]
+      }
+    },
+    "/files/download/{fileId}": {
+      "get": {
+        "summary": "下载文件",
+        "deprecated": false,
+        "tags": [
+          "FileController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "operationId": "downloadFile",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "No comments found.",
+            "required": true,
+            "name": "fileId"
+          }
+        ]
+      }
+    },
+    "/files/download/batch": {
+      "post": {
+        "summary": "批量下载文件(打包为zip)",
+        "deprecated": false,
+        "tags": [
+          "FileController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "operationId": "downloadFilesBatch",
+        "parameters": []
+      }
+    },
+    "/files/recycle": {
+      "get": {
+        "summary": "分页查询回收站文件",
+        "deprecated": false,
+        "tags": [
+          "FileController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResultFileRecordDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listRecycleFiles",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "搜索关键词",
+            "required": false,
+            "name": "keyword"
+          },
+          {
+            "schema": {
+              "format": "int64",
+              "type": "number"
+            },
+            "in": "query",
+            "description": "页索引",
+            "required": true,
+            "example": 0,
+            "name": "pageIndex"
+          },
+          {
+            "schema": {
+              "format": "int64",
+              "type": "number"
+            },
+            "in": "query",
+            "description": "每页大小",
+            "required": true,
+            "example": 20,
+            "name": "pageSize"
+          }
+        ]
+      },
+      "delete": {
+        "summary": "批量移入回收站",
+        "deprecated": false,
+        "tags": [
+          "FileController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "moveToRecycle",
+        "parameters": []
+      }
+    },
+    "/files/recycle/restore": {
+      "put": {
+        "summary": "恢复回收站文件",
+        "deprecated": false,
+        "tags": [
+          "FileController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreRecycleCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "restore",
+        "parameters": []
+      }
+    },
+    "/files/recycle/permanent": {
+      "delete": {
+        "summary": "永久删除回收站文件",
+        "deprecated": false,
+        "tags": [
+          "FileController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "permanentlyDelete",
+        "parameters": []
+      }
+    },
+    "/files/recycle/clear": {
+      "delete": {
+        "summary": "清空回收站",
+        "deprecated": false,
+        "tags": [
+          "FileController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "clearRecycle",
+        "parameters": []
+      }
+    },
+    "/files/favorites": {
+      "post": {
+        "summary": "收藏文件",
+        "deprecated": false,
+        "tags": [
+          "FileController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FavoriteFilesCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "favorite",
+        "parameters": []
+      }
+    },
+    "/files/unfavorite": {
+      "post": {
+        "summary": "取消收藏文件",
+        "deprecated": false,
+        "tags": [
+          "FileController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FavoriteFilesCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "unfavorite",
+        "parameters": []
+      }
+    },
+    "/files/favorites/count": {
+      "get": {
+        "summary": "获取收藏数量",
+        "deprecated": false,
+        "tags": [
+          "FileController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultLong"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "favoritesCount",
+        "parameters": []
+      }
+    },
+    "/plans/pages": {
+      "get": {
+        "summary": "分页获取套餐列表",
+        "deprecated": false,
+        "tags": [
+          "SubscriptionPlanController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResultSubscriptionPlanDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listSubscriptionPlanPages",
+        "parameters": [
+          {
+            "schema": {
+              "format": "int64",
+              "type": "number"
+            },
+            "in": "query",
+            "description": "No comments found.\nValidation[Min(value=1, message=pageNo必须大于0)]",
+            "required": false,
+            "example": 0,
+            "name": "pageNo"
+          },
+          {
+            "schema": {
+              "format": "int64",
+              "type": "number"
+            },
+            "in": "query",
+            "description": "No comments found.\nValidation[Min(value=1, message=    pageSize必须大于0)]",
+            "required": false,
+            "example": 0,
+            "name": "pageSize"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "name": "planName"
+          }
+        ]
+      }
+    },
+    "/plans/info/{id}": {
+      "get": {
+        "summary": "获取套餐详细信息",
+        "deprecated": false,
+        "tags": [
+          "SubscriptionPlanController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultSubscriptionPlanDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getSubscriptionPlanById",
+        "parameters": [
+          {
+            "schema": {
+              "format": "int64",
+              "type": "number"
+            },
+            "in": "path",
+            "description": "套餐ID",
+            "required": true,
+            "example": 0,
+            "name": "id"
+          }
+        ]
+      }
+    },
+    "/plans": {
+      "post": {
+        "summary": "添加套餐",
+        "deprecated": false,
+        "tags": [
+          "SubscriptionPlanController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionPlanAddCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "addSubscriptionPlan",
+        "parameters": []
+      },
+      "put": {
+        "summary": "编辑套餐",
+        "deprecated": false,
+        "tags": [
+          "SubscriptionPlanController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionPlanEditCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "editSubscriptionPlan",
+        "parameters": []
+      }
+    },
+    "/plans/{id}": {
+      "delete": {
+        "summary": "根据ID删除套餐",
+        "deprecated": false,
+        "tags": [
+          "SubscriptionPlanController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteSubscriptionPlanById",
+        "parameters": [
+          {
+            "schema": {
+              "format": "int64",
+              "type": "number"
+            },
+            "in": "path",
+            "description": "套餐ID",
+            "required": true,
+            "example": 0,
+            "name": "id"
+          }
+        ]
+      }
+    },
+    "/shares": {
+      "post": {
+        "summary": "创建分享",
+        "deprecated": false,
+        "tags": [
+          "FileShareController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateShareCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultFileShareDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "createFileShare",
+        "parameters": []
+      },
+      "get": {
+        "summary": "按用户查询分享列表",
+        "deprecated": false,
+        "tags": [
+          "FileShareController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultFileShareDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listFileSharesByUser",
+        "parameters": []
+      },
+      "delete": {
+        "summary": "批量取消分享",
+        "deprecated": false,
+        "tags": [
+          "FileShareController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "cancelFileShares",
+        "parameters": []
+      }
+    },
+    "/shares/pages": {
+      "get": {
+        "summary": "分页查询分享",
+        "deprecated": false,
+        "tags": [
+          "FileShareController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResultFileShareDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "pageFileSharesByUser",
+        "parameters": [
+          {
+            "schema": {
+              "format": "int64",
+              "type": "number"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": true,
+            "example": 0,
+            "name": "pageIndex"
+          },
+          {
+            "schema": {
+              "format": "int64",
+              "type": "number"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": true,
+            "example": 20,
+            "name": "pageSize"
+          }
+        ]
+      }
+    },
+    "/shares/{shareId}": {
+      "get": {
+        "summary": "查询分享详情",
+        "deprecated": false,
+        "tags": [
+          "FileShareController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultFileShareDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getFileShareById",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "分享ID",
+            "required": true,
+            "name": "shareId"
+          }
+        ]
+      }
+    },
+    "/shares/{shareId}/info": {
+      "get": {
+        "summary": "获取分享页信息（精简版）",
+        "deprecated": false,
+        "tags": [
+          "FileShareController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultFileShareThinDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getShareInfo",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "分享ID",
+            "required": true,
+            "name": "shareId"
+          }
+        ]
+      }
+    },
+    "/shares/{shareId}/verify-code": {
+      "post": {
+        "summary": "验证分享提取码",
+        "deprecated": false,
+        "tags": [
+          "FileShareController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyShareCodeCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultBoolean"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "verifyShareCode",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "分享ID",
+            "required": true,
+            "name": "shareId"
+          }
+        ]
+      }
+    },
+    "/shares/{shareId}/items": {
+      "get": {
+        "summary": "获取分享文件列表",
+        "deprecated": false,
+        "tags": [
+          "FileShareController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultFileRecordDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listShareFiles",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "分享ID",
+            "required": true,
+            "name": "shareId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "提取码（可选）",
+            "required": false,
+            "name": "shareCode"
+          }
+        ]
+      }
+    },
+    "/shares/{shareId}/download/{fileId}": {
+      "get": {
+        "summary": "下载分享内文件",
+        "deprecated": false,
+        "tags": [
+          "FileShareController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/defaultPrimitive"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "downloadShareFile",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "分享ID",
+            "required": true,
+            "name": "shareId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "文件ID",
+            "required": true,
+            "name": "fileId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "提取码（可选）",
+            "required": false,
+            "name": "shareCode"
+          }
+        ]
+      }
+    },
+    "/shares/clears": {
+      "delete": {
+        "summary": "清空当前用户所有分享",
+        "deprecated": false,
+        "tags": [
+          "FileShareController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "clearAllFileShares",
+        "parameters": []
+      }
+    },
+    "/shares/{shareId}/access-records": {
+      "post": {
+        "summary": "记录分享访问",
+        "deprecated": false,
+        "tags": [
+          "FileShareController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateShareAccessRecordCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultVoid"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "recordAccess",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "分享ID",
+            "required": true,
+            "name": "shareId"
+          }
+        ]
+      },
+      "get": {
+        "summary": "查询分享访问记录",
+        "deprecated": false,
+        "tags": [
+          "FileShareController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultFileShareAccessRecordDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listAccessRecords",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "分享ID",
+            "required": true,
+            "name": "shareId"
+          }
+        ]
+      }
+    },
+    "/page/{fileId}": {
+      "get": {
+        "summary": "文件预览页面",
+        "deprecated": false,
+        "tags": [
+          "PreviewPageController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "renderFilePreviewPage",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "文件ID",
+            "required": true,
+            "name": "fileId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "预览令牌",
+            "required": true,
+            "name": "previewToken"
+          }
+        ]
+      }
+    },
+    "/page/archive/{archiveFileId}": {
+      "get": {
+        "summary": "压缩包内文件预览页面",
+        "deprecated": false,
+        "tags": [
+          "PreviewPageController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "renderArchiveFilePreviewPage",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "压缩包文件ID",
+            "required": true,
+            "name": "archiveFileId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "压缩包内文件路径",
+            "required": true,
+            "name": "innerPath"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "预览令牌",
+            "required": true,
+            "name": "previewToken"
+          }
+        ]
+      }
+    },
+    "/page/error": {
+      "get": {
+        "summary": "预览错误页",
+        "deprecated": false,
+        "tags": [
+          "PreviewPageController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "renderFilePreviewErrorPage",
+        "parameters": []
+      }
+    },
+    "/page/archive/error": {
+      "get": {
+        "summary": "压缩包预览错误页",
+        "deprecated": false,
+        "tags": [
+          "PreviewPageController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "renderArchiveFilePreviewErrorPage",
+        "parameters": []
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MultiResultStorageFormTemplateDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回数据",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StorageFormTemplateDTO"
+            }
+          }
+        }
+      },
+      "MultiResultFileRecordDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回数据",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FileRecordDTO"
+            }
+          }
+        }
+      },
+      "MultiResultFileShareAccessRecordDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回数据",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FileShareAccessRecordDTO"
+            }
+          }
+        }
+      },
+      "StoragePlatformDTO": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "format": "int64",
+            "description": "平台ID",
+            "type": "number",
+            "example": 0
+          },
+          "name": {
+            "format": "string",
+            "description": "平台名称",
+            "type": "string"
+          },
+          "identifier": {
+            "format": "string",
+            "description": "平台标识符",
+            "type": "string"
+          },
+          "configSchema": {
+            "format": "string",
+            "description": "配置模式（JSON格式）",
+            "type": "string"
+          },
+          "icon": {
+            "format": "string",
+            "description": "图标",
+            "type": "string"
+          },
+          "link": {
+            "format": "string",
+            "description": "链接地址",
+            "type": "string"
+          },
+          "isDefault": {
+            "format": "int32",
+            "description": "是否为默认平台",
+            "type": "integer",
+            "example": 0
+          },
+          "description": {
+            "format": "string",
+            "description": "描述信息",
+            "type": "string"
+          }
+        }
+      },
+      "SingleResultStorageCapacityDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/StorageCapacityDTO"
+          }
+        }
+      },
+      "MultiResultFileTransferTaskDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回数据",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FileTransferTaskDTO"
+            }
+          }
+        }
+      },
+      "MultiResultStoragePlatformDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回数据",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StoragePlatformDTO"
+            }
+          }
+        }
+      },
+      "FavoriteFilesCommand": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "fileIds": {
+            "description": "No comments found.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": "\"\"\",\"\"\""
+          }
+        },
+        "required": [
+          "fileIds"
+        ]
+      },
+      "FileHomeUsedBytesDTO": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "format": "string",
+            "description": "存储名称",
+            "type": "string"
+          },
+          "usedBytes": {
+            "format": "int64",
+            "description": "已用字节数",
+            "type": "number",
+            "example": 0
+          }
+        }
+      },
+      "SingleResultStorageFormTemplateDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/StorageFormTemplateDTO"
+          }
+        }
+      },
+      "SingleResultFileTransferTaskDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/FileTransferTaskDTO"
+          }
+        }
+      },
+      "SingleResultStorageSettingDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/StorageSettingDTO"
+          }
+        }
+      },
+      "CreateDirectoryCommand": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "parentId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "folderName": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "storageSettingId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId",
+          "folderName"
+        ]
+      },
+      "RenameFileCommand": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "fileName": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId",
+          "fileName"
+        ]
+      },
+      "SingleResultFileShareThinDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/FileShareThinDTO"
+          }
+        }
+      },
+      "MultiResultDirectoryTreeDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回数据",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DirectoryTreeDTO"
+            }
+          }
+        }
+      },
+      "StorageActivePlatformDTO": {
+        "type": "object",
+        "properties": {
+          "settingId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "platformIdentifier": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "platformName": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "platformIcon": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "remark": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "updatedAt": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "isEnabled": {
+            "format": "boolean",
+            "description": "No comments found.",
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "PermanentlyDeleteRecycleCommand": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "fileIds": {
+            "description": "No comments found.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": "\"\"\",\"\"\""
+          }
+        },
+        "required": [
+          "userId",
+          "fileIds"
+        ]
+      },
+      "CheckUploadCommand": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "fileMd5": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "taskId",
+          "fileMd5"
+        ]
+      },
+      "PageResultFileShareDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "totalCount": {
+            "format": "int64",
+            "description": "总数",
+            "type": "number",
+            "example": 0
+          },
+          "pageSize": {
+            "format": "int32",
+            "description": "页数",
+            "type": "integer",
+            "example": 0
+          },
+          "pageIndex": {
+            "format": "int32",
+            "description": "当前页数",
+            "type": "integer",
+            "example": 0
+          },
+          "data": {
+            "description": "返回数据",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FileShareDTO"
+            }
+          }
+        }
+      },
+      "CreateShareAccessRecordCommand": {
+        "type": "object",
+        "properties": {
+          "shareId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "accessIp": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "accessAddress": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "browser": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "os": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          }
+        }
+      },
+      "InitDownloadCommand": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "fileId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "chunkSize": {
+            "format": "int64",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0
+          }
+        },
+        "required": [
+          "userId",
+          "fileId"
+        ]
+      },
+      "MoveFileCommand": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "fileId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "targetParentId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId",
+          "fileId"
+        ]
+      },
+      "CreateShareCommand": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "fileIds": {
+            "description": "No comments found.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": "\"\"\",\"\"\""
+          },
+          "shareName": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "expireType": {
+            "format": "int32",
+            "description": "No comments found.",
+            "type": "integer",
+            "example": 0
+          },
+          "expireTime": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "scope": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "needShareCode": {
+            "format": "boolean",
+            "description": "No comments found.",
+            "type": "boolean",
+            "example": true
+          },
+          "maxViewCount": {
+            "format": "int32",
+            "description": "No comments found.",
+            "type": "integer",
+            "example": 0
+          },
+          "maxDownloadCount": {
+            "format": "int32",
+            "description": "No comments found.",
+            "type": "integer",
+            "example": 0
+          }
+        },
+        "required": [
+          "userId",
+          "fileIds"
+        ]
+      },
+      "SubscriptionPlanEditCommand": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "format": "int64",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0
+          },
+          "planCode": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "planName": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "description": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "storageQuotaGb": {
+            "format": "int32",
+            "description": "No comments found.",
+            "type": "integer",
+            "example": 0
+          },
+          "maxFiles": {
+            "format": "int32",
+            "description": "No comments found.",
+            "type": "integer",
+            "example": 0
+          },
+          "maxFileSize": {
+            "format": "int64",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0
+          },
+          "bandwidthQuota": {
+            "format": "int64",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0
+          },
+          "price": {
+            "format": "double",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0.0
+          },
+          "isActive": {
+            "format": "int32",
+            "description": "No comments found.\nValidation[Min(value=0, message=isActive只能是0或1); Max(value=1, message=isActive只能是0或1)]",
+            "type": "integer",
+            "example": 0
+          },
+          "isDefault": {
+            "format": "int32",
+            "description": "No comments found.\nValidation[Min(value=0, message=isDefault只能是0或1); Max(value=1, message=isDefault只能是0或1)]",
+            "type": "integer",
+            "example": 0
+          },
+          "sortOrder": {
+            "format": "int32",
+            "description": "No comments found.",
+            "type": "integer",
+            "example": 0
+          }
+        },
+        "required": [
+          "id",
+          "planCode",
+          "planName",
+          "storageQuotaGb",
+          "maxFiles",
+          "maxFileSize",
+          "bandwidthQuota",
+          "price",
+          "isActive",
+          "isDefault",
+          "sortOrder"
+        ]
+      },
+      "FileShareThinDTO": {
+        "type": "object",
+        "properties": {
+          "shareId": {
+            "format": "string",
+            "description": "分享ID",
+            "type": "string"
+          },
+          "shareName": {
+            "format": "string",
+            "description": "分享名称",
+            "type": "string"
+          },
+          "shareCode": {
+            "format": "string",
+            "description": "提取码",
+            "type": "string"
+          },
+          "fileCount": {
+            "format": "int32",
+            "description": "文件数量",
+            "type": "integer",
+            "example": 0
+          },
+          "hasCheckCode": {
+            "format": "boolean",
+            "description": "是否需要提取码",
+            "type": "boolean",
+            "example": true
+          },
+          "isExpire": {
+            "format": "boolean",
+            "description": "是否已过期",
+            "type": "boolean",
+            "example": true
+          },
+          "expireTime": {
+            "format": "string",
+            "description": "过期时间",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "viewCount": {
+            "format": "int32",
+            "description": "已浏览次数",
+            "type": "integer",
+            "example": 0
+          },
+          "downloadCount": {
+            "format": "int32",
+            "description": "已下载次数",
+            "type": "integer",
+            "example": 0
+          }
+        }
+      },
+      "MultiResultStorageSettingDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回数据",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StorageSettingDTO"
+            }
+          }
+        }
+      },
+      "SingleResultFilePreviewDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/FilePreviewDTO"
+          }
+        }
+      },
+      "FileRecord": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "objectKey": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "originalName": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "displayName": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "suffix": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "size": {
+            "format": "int64",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0
+          },
+          "mimeType": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "isDir": {
+            "format": "boolean",
+            "description": "No comments found.",
+            "type": "boolean",
+            "example": true
+          },
+          "parentId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "userId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "contentMd5": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "storageSettingId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "uploadTime": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "updateTime": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "lastAccessTime": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "isDeleted": {
+            "format": "boolean",
+            "description": "No comments found.",
+            "type": "boolean",
+            "example": true
+          },
+          "deletedTime": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          }
+        }
+      },
+      "StorageSettingDTO": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "format": "string",
+            "description": "配置ID",
+            "type": "string"
+          },
+          "platformIdentifier": {
+            "format": "string",
+            "description": "平台标识符",
+            "type": "string"
+          },
+          "configData": {
+            "format": "string",
+            "description": "配置数据（JSON格式）",
+            "type": "string"
+          },
+          "enabled": {
+            "format": "int32",
+            "description": "是否启用",
+            "type": "integer",
+            "example": 0
+          },
+          "userId": {
+            "format": "string",
+            "description": "所属用户ID",
+            "type": "string"
+          },
+          "remark": {
+            "format": "string",
+            "description": "备注信息",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "string",
+            "description": "创建时间",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "updatedAt": {
+            "format": "string",
+            "description": "更新时间",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          }
+        }
+      },
+      "SingleResultCheckUploadResultDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/CheckUploadResultDTO"
+          }
+        }
+      },
+      "StorageFormTemplateDTO": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "name": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "description": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "category": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "version": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "formSchema": {
+            "description": "No comments found.(object)",
+            "$ref": "#/components/schemas/Object"
+          },
+          "initialValues": {
+            "description": "No comments found.(object)",
+            "$ref": "#/components/schemas/Object"
+          }
+        }
+      },
+      "PageResultSubscriptionPlanDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "totalCount": {
+            "format": "int64",
+            "description": "总数",
+            "type": "number",
+            "example": 0
+          },
+          "pageSize": {
+            "format": "int32",
+            "description": "页数",
+            "type": "integer",
+            "example": 0
+          },
+          "pageIndex": {
+            "format": "int32",
+            "description": "当前页数",
+            "type": "integer",
+            "example": 0
+          },
+          "data": {
+            "description": "返回数据",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubscriptionPlanDTO"
+            }
+          }
+        }
+      },
+      "SingleResultSubscriptionPlanDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/SubscriptionPlanDTO"
+          }
+        }
+      },
+      "defaultPrimitive": {
+        "type": "object",
+        "properties": {
+          "shareIds": {
+            "description": "分享ID列表,[array of string]",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "SingleResultString": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "format": "string",
+            "description": "返回的单条数据",
+            "type": "string"
+          }
+        }
+      },
+      "SingleResultFileRecord": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/FileRecord"
+          }
+        }
+      },
+      "CheckUploadResultDTO": {
+        "type": "object",
+        "properties": {
+          "instantUpload": {
+            "format": "boolean",
+            "description": "是否秒传",
+            "type": "boolean",
+            "example": true
+          },
+          "taskId": {
+            "format": "string",
+            "description": "任务ID",
+            "type": "string"
+          },
+          "status": {
+            "format": "string",
+            "description": "任务状态",
+            "type": "string"
+          },
+          "message": {
+            "format": "string",
+            "description": "提示信息",
+            "type": "string"
+          }
+        }
+      },
+      "StorageCapacityDTO": {
+        "type": "object",
+        "properties": {
+          "settingId": {
+            "format": "string",
+            "description": "存储配置ID",
+            "type": "string"
+          },
+          "platformIdentifier": {
+            "format": "string",
+            "description": "平台标识符",
+            "type": "string"
+          },
+          "totalBytes": {
+            "format": "int64",
+            "description": "总容量，字节",
+            "type": "number",
+            "example": 0
+          },
+          "usedBytes": {
+            "format": "int64",
+            "description": "已使用容量，字节",
+            "type": "number",
+            "example": 0
+          },
+          "freeBytes": {
+            "format": "int64",
+            "description": "可用容量，字节",
+            "type": "number",
+            "example": 0
+          },
+          "usableBytes": {
+            "format": "int64",
+            "description": "操作系统可用容量，字节",
+            "type": "number",
+            "example": 0
+          },
+          "storageRoot": {
+            "format": "string",
+            "description": "存储根目录",
+            "type": "string"
+          }
+        }
+      },
+      "SseEmitter": {
+        "type": "object",
+        "properties": {
+          "timeout": {
+            "format": "int64",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0
+          },
+          "handler": {
+            "description": "No comments found.(object)",
+            "type": "object"
+          },
+          "earlySendAttempts": {
+            "description": "No comments found.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "complete": {
+            "format": "boolean",
+            "description": "No comments found.",
+            "type": "boolean",
+            "example": true
+          },
+          "failure": {
+            "description": "No comments found.(object)",
+            "type": "object"
+          },
+          "timeoutCallback": {
+            "description": "No comments found.(object)",
+            "type": "object"
+          },
+          "errorCallback": {
+            "description": "No comments found.(object)",
+            "type": "object"
+          },
+          "completionCallback": {
+            "description": "No comments found.(object)",
+            "type": "object"
+          },
+          "writeLock": {
+            "description": "No comments found.(object)",
+            "type": "object"
+          }
+        }
+      },
+      "Object": {
+        "type": "object",
+        "properties": {
+          "mapKey": {
+            "description": "A map key.(object)",
+            "$ref": "#/components/schemas/Object"
+          }
+        }
+      },
+      "UpsertStorageSettingCommand": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "platformIdentifier": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "configData": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "userId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "remark": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "enabled": {
+            "format": "int32",
+            "description": "No comments found.",
+            "type": "integer",
+            "example": 0
+          }
+        },
+        "required": [
+          "platformIdentifier",
+          "configData",
+          "userId"
+        ]
+      },
+      "MergeChunksCommand": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "taskId"
+        ]
+      },
+      "SubscriptionPlanAddCommand": {
+        "type": "object",
+        "properties": {
+          "planCode": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "planName": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "description": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "storageQuotaGb": {
+            "format": "int32",
+            "description": "No comments found.",
+            "type": "integer",
+            "example": 0
+          },
+          "maxFiles": {
+            "format": "int32",
+            "description": "No comments found.",
+            "type": "integer",
+            "example": 0
+          },
+          "maxFileSize": {
+            "format": "int64",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0
+          },
+          "bandwidthQuota": {
+            "format": "int64",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0
+          },
+          "price": {
+            "format": "double",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0.0
+          },
+          "isActive": {
+            "format": "int32",
+            "description": "No comments found.\nValidation[Min(value=0, message=isActive只能是0或1); Max(value=1, message=isActive只能是0或1)]",
+            "type": "integer",
+            "example": 0
+          },
+          "isDefault": {
+            "format": "int32",
+            "description": "No comments found.\nValidation[Min(value=0, message=isDefault只能是0或1); Max(value=1, message=isDefault只能是0或1)]",
+            "type": "integer",
+            "example": 0
+          },
+          "sortOrder": {
+            "format": "int32",
+            "description": "No comments found.",
+            "type": "integer",
+            "example": 0
+          }
+        },
+        "required": [
+          "planCode",
+          "planName",
+          "storageQuotaGb",
+          "maxFiles",
+          "maxFileSize",
+          "bandwidthQuota",
+          "price",
+          "isActive",
+          "isDefault",
+          "sortOrder"
+        ]
+      },
+      "SingleResultFileRecordDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/FileRecordDTO"
+          }
+        }
+      },
+      "DirectoryTreeDTO": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "originalName": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "displayName": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "suffix": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "size": {
+            "format": "int64",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0
+          },
+          "isDir": {
+            "format": "boolean",
+            "description": "No comments found.",
+            "type": "boolean",
+            "example": true
+          },
+          "parentId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "userId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "storageSettingId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "isDeleted": {
+            "format": "boolean",
+            "description": "No comments found.",
+            "type": "boolean",
+            "example": true
+          },
+          "isFavorite": {
+            "format": "boolean",
+            "description": "No comments found.",
+            "type": "boolean",
+            "example": true
+          },
+          "uploadTime": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "updateTime": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "children": {
+            "description": "No comments found.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "MoveToRecycleBinCommand": {
+        "type": "object",
+        "properties": {
+          "fileIds": {
+            "description": "No comments found.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": "\"\"\",\"\"\""
+          }
+        },
+        "required": [
+          "fileIds"
+        ]
+      },
+      "FileTransferTaskDTO": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "format": "string",
+            "description": "任务ID",
+            "type": "string"
+          },
+          "userId": {
+            "format": "string",
+            "description": "用户ID",
+            "type": "string"
+          },
+          "fileName": {
+            "format": "string",
+            "description": "文件名",
+            "type": "string"
+          },
+          "fileSize": {
+            "format": "int64",
+            "description": "文件大小（字节）",
+            "type": "number",
+            "example": 0
+          },
+          "totalChunks": {
+            "format": "int32",
+            "description": "总分片数",
+            "type": "integer",
+            "example": 0
+          },
+          "uploadedChunks": {
+            "format": "int32",
+            "description": "已传输分片数",
+            "type": "integer",
+            "example": 0
+          },
+          "fileMd5": {
+            "format": "string",
+            "description": "文件MD5",
+            "type": "string"
+          },
+          "status": {
+            "format": "string",
+            "description": "任务状态",
+            "type": "string"
+          },
+          "taskType": {
+            "format": "string",
+            "description": "任务类型（upload/download）",
+            "type": "string"
+          },
+          "errorMsg": {
+            "format": "string",
+            "description": "错误信息",
+            "type": "string"
+          },
+          "startTime": {
+            "format": "string",
+            "description": "开始时间",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "completeTime": {
+            "format": "string",
+            "description": "完成时间",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          }
+        }
+      },
+      "VerifyShareCodeCommand": {
+        "type": "object",
+        "properties": {
+          "shareId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "shareCode": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shareId",
+          "shareCode"
+        ]
+      },
+      "FilePreviewDTO": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "format": "string",
+            "description": "文件ID",
+            "type": "string"
+          },
+          "fileName": {
+            "format": "string",
+            "description": "文件名",
+            "type": "string"
+          },
+          "mimeType": {
+            "format": "string",
+            "description": "MIME类型",
+            "type": "string"
+          },
+          "previewType": {
+            "format": "string",
+            "description": "预览类型（image/video/audio/document/markdown/code/text）",
+            "type": "string"
+          },
+          "streamUrl": {
+            "format": "string",
+            "description": "流式传输URL",
+            "type": "string"
+          },
+          "fileSize": {
+            "format": "int64",
+            "description": "文件大小（字节）",
+            "type": "number",
+            "example": 0
+          }
+        }
+      },
+      "SingleResultFileShareDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/FileShareDTO"
+          }
+        }
+      },
+      "PageResultFileTransferTaskDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "totalCount": {
+            "format": "int64",
+            "description": "总数",
+            "type": "number",
+            "example": 0
+          },
+          "pageSize": {
+            "format": "int32",
+            "description": "页数",
+            "type": "integer",
+            "example": 0
+          },
+          "pageIndex": {
+            "format": "int32",
+            "description": "当前页数",
+            "type": "integer",
+            "example": 0
+          },
+          "data": {
+            "description": "返回数据",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FileTransferTaskDTO"
+            }
+          }
+        }
+      },
+      "MultiResultStorageActivePlatformDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回数据",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StorageActivePlatformDTO"
+            }
+          }
+        }
+      },
+      "FileRecordDTO": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "format": "string",
+            "description": "文件ID",
+            "type": "string"
+          },
+          "originalName": {
+            "format": "string",
+            "description": "原始文件名",
+            "type": "string"
+          },
+          "displayName": {
+            "format": "string",
+            "description": "显示文件名",
+            "type": "string"
+          },
+          "suffix": {
+            "format": "string",
+            "description": "文件后缀",
+            "type": "string"
+          },
+          "size": {
+            "format": "int64",
+            "description": "文件大小（字节）",
+            "type": "number",
+            "example": 0
+          },
+          "isDir": {
+            "format": "boolean",
+            "description": "是否为目录",
+            "type": "boolean",
+            "example": true
+          },
+          "parentId": {
+            "format": "string",
+            "description": "父目录ID",
+            "type": "string"
+          },
+          "userId": {
+            "format": "string",
+            "description": "所属用户ID",
+            "type": "string"
+          },
+          "storageSettingId": {
+            "format": "string",
+            "description": "存储配置ID",
+            "type": "string"
+          },
+          "isDeleted": {
+            "format": "boolean",
+            "description": "是否已删除",
+            "type": "boolean",
+            "example": true
+          },
+          "isFavorite": {
+            "format": "boolean",
+            "description": "是否收藏",
+            "type": "boolean",
+            "example": true
+          },
+          "uploadTime": {
+            "format": "string",
+            "description": "上传时间",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "updateTime": {
+            "format": "string",
+            "description": "更新时间",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          }
+        }
+      },
+      "FileShareDTO": {
+        "type": "object",
+        "properties": {
+          "shareId": {
+            "format": "string",
+            "description": "分享ID",
+            "type": "string"
+          },
+          "userId": {
+            "format": "string",
+            "description": "所属用户ID",
+            "type": "string"
+          },
+          "shareName": {
+            "format": "string",
+            "description": "分享名称",
+            "type": "string"
+          },
+          "shareCode": {
+            "format": "string",
+            "description": "提取码",
+            "type": "string"
+          },
+          "scope": {
+            "format": "string",
+            "description": "分享范围",
+            "type": "string"
+          },
+          "expireTime": {
+            "format": "string",
+            "description": "过期时间",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "viewCount": {
+            "format": "int32",
+            "description": "已浏览次数",
+            "type": "integer",
+            "example": 0
+          },
+          "maxViewCount": {
+            "format": "int32",
+            "description": "最大浏览次数",
+            "type": "integer",
+            "example": 0
+          },
+          "downloadCount": {
+            "format": "int32",
+            "description": "已下载次数",
+            "type": "integer",
+            "example": 0
+          },
+          "maxDownloadCount": {
+            "format": "int32",
+            "description": "最大下载次数",
+            "type": "integer",
+            "example": 0
+          },
+          "fileIds": {
+            "description": "分享的文件ID列表",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": "\"\"\",\"\"\""
+          },
+          "createdAt": {
+            "format": "string",
+            "description": "创建时间",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "updatedAt": {
+            "format": "string",
+            "description": "更新时间",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          }
+        }
+      },
+      "MultiResultInteger": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回数据",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "FileTransferStatsDTO": {
+        "type": "object",
+        "properties": {
+          "uploadingCount": {
+            "format": "int64",
+            "description": "上传中任务数",
+            "type": "number",
+            "example": 0
+          },
+          "downloadingCount": {
+            "format": "int64",
+            "description": "下载中任务数",
+            "type": "number",
+            "example": 0
+          },
+          "completedCount": {
+            "format": "int64",
+            "description": "已完成任务数",
+            "type": "number",
+            "example": 0
+          }
+        }
+      },
+      "SingleResultFileHomeDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/FileHomeDTO"
+          }
+        }
+      },
+      "SingleResultBoolean": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "format": "boolean",
+            "description": "返回的单条数据",
+            "type": "boolean"
+          }
+        }
+      },
+      "PageResultFileRecordDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "totalCount": {
+            "format": "int64",
+            "description": "总数",
+            "type": "number",
+            "example": 0
+          },
+          "pageSize": {
+            "format": "int32",
+            "description": "页数",
+            "type": "integer",
+            "example": 0
+          },
+          "pageIndex": {
+            "format": "int32",
+            "description": "当前页数",
+            "type": "integer",
+            "example": 0
+          },
+          "data": {
+            "description": "返回数据",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FileRecordDTO"
+            }
+          }
+        }
+      },
+      "RestoreRecycleCommand": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "fileIds": {
+            "description": "No comments found.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": "\"\"\",\"\"\""
+          }
+        },
+        "required": [
+          "userId",
+          "fileIds"
+        ]
+      },
+      "SingleResultVoid": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "type": "object"
+          }
+        }
+      },
+      "FileHomeDTO": {
+        "type": "object",
+        "properties": {
+          "fileCount": {
+            "format": "int64",
+            "description": "文件数量",
+            "type": "number",
+            "example": 0
+          },
+          "directoryCount": {
+            "format": "int64",
+            "description": "目录数量",
+            "type": "number",
+            "example": 0
+          },
+          "recycleCount": {
+            "format": "int64",
+            "description": "回收站文件数量",
+            "type": "number",
+            "example": 0
+          },
+          "favoriteCount": {
+            "format": "int64",
+            "description": "收藏数量",
+            "type": "number",
+            "example": 0
+          },
+          "totalBytes": {
+            "format": "int64",
+            "description": "总字节数",
+            "type": "number",
+            "example": 0
+          },
+          "unit": {
+            "format": "int32",
+            "description": "首页趋势参数",
+            "type": "integer",
+            "example": 0
+          },
+          "dateType": {
+            "format": "int32",
+            "description": "趋势日期类型",
+            "type": "integer",
+            "example": 0
+          },
+          "usedBytes": {
+            "description": "各存储已用字节数列表",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FileHomeUsedBytesDTO"
+            }
+          },
+          "recentFiles": {
+            "description": "最近文件列表",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FileRecordDTO"
+            }
+          }
+        }
+      },
+      "SingleResultLong": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "format": "int64",
+            "description": "返回的单条数据",
+            "type": "number"
+          }
+        }
+      },
+      "MultiResultFileShareDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回数据",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FileShareDTO"
+            }
+          }
+        }
+      },
+      "FileShareAccessRecordDTO": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "format": "string",
+            "description": "记录ID",
+            "type": "string"
+          },
+          "shareId": {
+            "format": "string",
+            "description": "分享ID",
+            "type": "string"
+          },
+          "accessIp": {
+            "format": "string",
+            "description": "访问IP地址",
+            "type": "string"
+          },
+          "accessAddress": {
+            "format": "string",
+            "description": "访问地理位置",
+            "type": "string"
+          },
+          "browser": {
+            "format": "string",
+            "description": "浏览器类型",
+            "type": "string"
+          },
+          "os": {
+            "format": "string",
+            "description": "操作系统",
+            "type": "string"
+          },
+          "accessTime": {
+            "format": "string",
+            "description": "访问时间",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          }
+        }
+      },
+      "SubscriptionPlanDTO": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "format": "int64",
+            "description": "套餐ID",
+            "type": "number",
+            "example": 0
+          },
+          "planCode": {
+            "format": "string",
+            "description": "套餐编码",
+            "type": "string"
+          },
+          "planName": {
+            "format": "string",
+            "description": "套餐名称",
+            "type": "string"
+          },
+          "description": {
+            "format": "string",
+            "description": "套餐描述",
+            "type": "string"
+          },
+          "storageQuotaGb": {
+            "format": "int32",
+            "description": "存储配额（GB）",
+            "type": "integer",
+            "example": 0
+          },
+          "maxFiles": {
+            "format": "int32",
+            "description": "最大文件数量",
+            "type": "integer",
+            "example": 0
+          },
+          "maxFileSize": {
+            "format": "int64",
+            "description": "单文件最大大小（字节）",
+            "type": "number",
+            "example": 0
+          },
+          "bandwidthQuota": {
+            "format": "int64",
+            "description": "带宽配额",
+            "type": "number",
+            "example": 0
+          },
+          "price": {
+            "format": "double",
+            "description": "价格",
+            "type": "number",
+            "example": 0.0
+          },
+          "isActive": {
+            "format": "int32",
+            "description": "是否启用",
+            "type": "integer",
+            "example": 0
+          },
+          "isDefault": {
+            "format": "int32",
+            "description": "是否为默认套餐",
+            "type": "integer",
+            "example": 0
+          },
+          "sortOrder": {
+            "format": "int32",
+            "description": "排序值",
+            "type": "integer",
+            "example": 0
+          },
+          "createdAt": {
+            "format": "string",
+            "description": "创建时间",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "updatedAt": {
+            "format": "string",
+            "description": "更新时间",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          }
+        }
+      },
+      "InitDownloadResultDTO": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "format": "string",
+            "description": "任务ID",
+            "type": "string"
+          },
+          "fileId": {
+            "format": "string",
+            "description": "文件ID",
+            "type": "string"
+          },
+          "fileName": {
+            "format": "string",
+            "description": "文件名",
+            "type": "string"
+          },
+          "fileSize": {
+            "format": "int64",
+            "description": "文件大小（字节）",
+            "type": "number",
+            "example": 0
+          },
+          "chunkSize": {
+            "format": "int64",
+            "description": "分片大小（字节）",
+            "type": "number",
+            "example": 0
+          },
+          "totalChunks": {
+            "format": "int32",
+            "description": "总分片数",
+            "type": "integer",
+            "example": 0
+          }
+        }
+      },
+      "SingleResultStoragePlatformDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/StoragePlatformDTO"
+          }
+        }
+      },
+      "SingleResultFileTransferStatsDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/FileTransferStatsDTO"
+          }
+        }
+      },
+      "InitTransferUploadCommand": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "fileName": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "fileSize": {
+            "format": "int64",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0
+          },
+          "parentId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "totalChunks": {
+            "format": "int32",
+            "description": "No comments found.",
+            "type": "integer",
+            "example": 0
+          },
+          "chunkSize": {
+            "format": "int64",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0
+          },
+          "mimeType": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "storageSettingId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "overwriteExisting": {
+            "format": "boolean",
+            "description": "No comments found.",
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "fileName",
+          "fileSize",
+          "totalChunks",
+          "chunkSize",
+          "mimeType"
+        ]
+      },
+      "SingleResultInitDownloadResultDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/InitDownloadResultDTO"
+          }
+        }
+      }
+    }
+  }
+}

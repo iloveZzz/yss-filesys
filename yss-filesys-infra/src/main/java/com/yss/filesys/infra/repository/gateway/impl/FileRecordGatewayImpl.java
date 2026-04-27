@@ -43,7 +43,7 @@ public class FileRecordGatewayImpl implements FileRecordGateway {
     @Override
     public List<FileRecord> search(FileSearchQuery query) {
         Page<FileRecordPO> page = fileRecordMapper.selectPage(
-                new Page<>(query.getPageNo(), query.getPageSize()),
+                new Page<>(query.getPageIndex() + 1, query.getPageSize()),
                 buildQueryWrapper(query)
         );
         return page.getRecords().stream().map(FileRecordConvertor::toDomain).toList();
@@ -195,11 +195,54 @@ public class FileRecordGatewayImpl implements FileRecordGateway {
                         .or()
                         .like(FileRecordPO::getDisplayName, query.getKeyword()));
         applyFileTypeFilter(wrapper, query);
+        return applySort(wrapper, query);
+    }
+
+    private LambdaQueryWrapper<FileRecordPO> applySort(LambdaQueryWrapper<FileRecordPO> wrapper, FileSearchQuery query) {
+        String sortField = normalizeSortField(query.getSortField());
+        String sortOrder = normalizeSortOrder(query.getSortOrder());
+        boolean asc = "asc".equals(sortOrder);
+        if ("size".equals(sortField)) {
+            return wrapper.orderBy(true, asc, FileRecordPO::getSize)
+                    .orderByDesc(FileRecordPO::getUpdateTime)
+                    .orderByDesc(FileRecordPO::getUploadTime);
+        }
+        if ("updateTime".equals(sortField)) {
+            return wrapper.orderBy(true, asc, FileRecordPO::getUpdateTime)
+                    .orderByDesc(FileRecordPO::getUploadTime);
+        }
         if (Boolean.TRUE.equals(query.getIsRecents())) {
-            wrapper.orderByDesc(FileRecordPO::getLastAccessTime);
+            return wrapper.orderByDesc(FileRecordPO::getLastAccessTime)
+                    .orderByDesc(FileRecordPO::getUpdateTime)
+                    .orderByDesc(FileRecordPO::getUploadTime);
         }
         return wrapper.orderByDesc(FileRecordPO::getUpdateTime)
                 .orderByDesc(FileRecordPO::getUploadTime);
+    }
+
+    private String normalizeSortField(String sortField) {
+        if (sortField == null) {
+            return "";
+        }
+        String normalized = sortField.trim();
+        if ("size".equalsIgnoreCase(normalized)) {
+            return "size";
+        }
+        if ("updateTime".equalsIgnoreCase(normalized)) {
+            return "updateTime";
+        }
+        return "";
+    }
+
+    private String normalizeSortOrder(String sortOrder) {
+        if (sortOrder == null) {
+            return "desc";
+        }
+        String normalized = sortOrder.trim();
+        if ("asc".equalsIgnoreCase(normalized)) {
+            return "asc";
+        }
+        return "desc";
     }
 
     private void applyFileTypeFilter(LambdaQueryWrapper<FileRecordPO> wrapper, FileSearchQuery query) {

@@ -30,6 +30,7 @@ public final class FileTransferTaskConvertor {
                 .uploadedChunks(po.getUploadedChunks())
                 .chunkSize(po.getChunkSize())
                 .uploadedSize(po.getUploadedSize())
+                .overwriteExisting(po.getOverwriteExisting())
                 .status(po.getStatus() == null ? null : TransferTaskStatus.valueOf(po.getStatus()))
                 .errorMsg(po.getErrorMsg())
                 .startTime(po.getStartTime())
@@ -59,6 +60,7 @@ public final class FileTransferTaskConvertor {
         po.setUploadedChunks(domain.getUploadedChunks());
         po.setChunkSize(domain.getChunkSize());
         po.setUploadedSize(domain.getUploadedSize());
+        po.setOverwriteExisting(domain.getOverwriteExisting());
         po.setStatus(domain.getStatus() == null ? null : domain.getStatus().name());
         po.setErrorMsg(domain.getErrorMsg());
         po.setStartTime(domain.getStartTime());

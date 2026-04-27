@@ -21,9 +21,9 @@ public class PageDTO<T> {
      */
     long total;
     /**
-     * 当前页码
+     * 当前页索引
      */
-    long pageNo;
+    long pageIndex;
     /**
      * 每页大小
      */

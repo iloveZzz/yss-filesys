@@ -5,10 +5,9 @@ import lombok.Data;
 
 @Data
 public class CreateDirectoryCommand {
-    @NotBlank
     private String userId;
     private String parentId;
-    @NotBlank
+    @NotBlank(message = "目录名称不能为空")
     private String folderName;
     private String storageSettingId;
 }

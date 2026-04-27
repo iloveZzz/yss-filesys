@@ -9,7 +9,6 @@ import java.util.List;
 
 @Data
 public class CreateShareCommand {
-    @NotBlank
     private String userId;
     @NotEmpty
     private List<String> fileIds;

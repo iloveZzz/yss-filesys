@@ -5,6 +5,9 @@ import lombok.Value;
 
 /**
  * 整体上传流程结果。
+ * <p>
+ * 描述一次上传从初始化、校验到最终合并完成后的关键返回信息。
+ * </p>
  */
 @Value
 @Builder

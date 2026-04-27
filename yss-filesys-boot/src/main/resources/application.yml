@@ -50,8 +50,5 @@ yss:
     token-expire-seconds: 300
 
 logging:
-  level:
-    com.yss.datamiddle.approval: DEBUG
-    org.springframework.jdbc: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

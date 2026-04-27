@@ -5,7 +5,6 @@ import lombok.Data;
 
 @Data
 public class MoveFileCommand {
-    @NotBlank
     private String userId;
     @NotBlank
     private String fileId;

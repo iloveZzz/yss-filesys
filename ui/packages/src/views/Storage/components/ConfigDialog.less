@@ -1,0 +1,110 @@
+.storage-modal :deep(.ant-modal-content) {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 80vh;
+  border-radius: 20px;
+  background: var(--app-surface-strong);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+}
+
+.storage-modal :deep(.ant-modal-body) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 22px 24px 20px;
+}
+
+.storage-modal-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.storage-modal-kicker {
+  color: #1677ff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.storage-schema-card {
+  flex: 1;
+  min-height: 0;
+  margin-top: 10px;
+  padding: 14px 14px 4px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 255, 0.96));
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  overflow: auto;
+}
+
+.storage-form :deep(.ant-form-item) {
+  margin-bottom: 12px;
+}
+
+.storage-form :deep(.ant-form-item-label > label) {
+  color: var(--app-text);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.storage-form :deep(.ant-form-item-required::before) {
+  color: #ef4444;
+}
+
+.storage-form :deep(.ant-select-selector),
+.storage-form :deep(.ant-input),
+.storage-form :deep(.ant-input-number) {
+  min-height: 34px;
+  border-radius: 8px;
+}
+
+.storage-form :deep(.ant-input-affix-wrapper),
+.storage-form :deep(.ant-select-selector),
+.storage-form :deep(.ant-input-number) {
+  border-radius: 8px;
+}
+
+.storage-modal-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 2px;
+  color: var(--app-accent);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.storage-modal-note :deep(svg) {
+  flex: none;
+  margin-top: 2px;
+}
+
+.platform-warning {
+  margin-top: 14px;
+  border-radius: 12px;
+}
+
+.storage-page.is-compact .storage-modal :deep(.ant-modal-body) {
+  padding: 18px 20px 16px;
+}
+
+.storage-page.is-compact .storage-form :deep(.ant-form-item) {
+  margin-bottom: 10px;
+}
+
+@media (max-width: 768px) {
+  .storage-modal :deep(.ant-modal-content) {
+    height: auto;
+    max-height: 90vh;
+  }
+
+  .storage-schema-card {
+    padding: 12px 12px 4px;
+  }
+}

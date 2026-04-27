@@ -29,7 +29,7 @@ public class SubscriptionPlanGatewayImpl implements SubscriptionPlanGateway {
         );
         return PageDTO.<SubscriptionPlan>builder()
                 .total(page.getTotal())
-                .pageNo(page.getCurrent())
+                .pageIndex(page.getCurrent())
                 .pageSize(page.getSize())
                 .records(page.getRecords().stream().map(SubscriptionPlanConvertor::toDomain).toList())
                 .build();

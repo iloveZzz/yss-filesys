@@ -29,7 +29,7 @@ public class SubscriptionPlanAppService implements SubscriptionPlanCommandUseCas
         PageDTO<SubscriptionPlan> page = subscriptionPlanGateway.page(query);
         return PageDTO.<SubscriptionPlanDTO>builder()
                 .total(page.getTotal())
-                .pageNo(page.getPageNo())
+                .pageIndex(page.getPageIndex())
                 .pageSize(page.getPageSize())
                 .records(page.getRecords().stream().map(this::toDTO).toList())
                 .build();

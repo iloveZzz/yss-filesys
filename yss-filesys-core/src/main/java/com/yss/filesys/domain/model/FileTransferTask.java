@@ -27,6 +27,7 @@ public class FileTransferTask {
     Integer uploadedChunks;
     Long chunkSize;
     Long uploadedSize;
+    Boolean overwriteExisting;
     TransferTaskStatus status;
     String errorMsg;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")

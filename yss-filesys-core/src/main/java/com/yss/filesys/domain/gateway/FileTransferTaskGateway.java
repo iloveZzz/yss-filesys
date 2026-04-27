@@ -2,6 +2,7 @@ package com.yss.filesys.domain.gateway;
 
 import com.yss.filesys.domain.model.FileTransferTask;
 import com.yss.filesys.domain.model.TransferTaskStatus;
+import com.yss.filesys.application.dto.PageDTO;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -17,6 +18,8 @@ public interface FileTransferTaskGateway {
     List<FileTransferTask> listByUserId(String userId, Integer statusType);
 
     long countByUserId(String userId, Integer statusType);
+
+    PageDTO<FileTransferTask> pageByUserId(String userId, Integer statusType, String keyword, long pageIndex, long pageSize);
 
     List<FileTransferTask> listFinishedBefore(LocalDateTime cutoff);
 

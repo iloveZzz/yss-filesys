@@ -2,6 +2,8 @@ package com.yss.filesys.infra.repository.gateway.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yss.filesys.application.dto.PageDTO;
 import com.yss.filesys.domain.gateway.FileTransferTaskGateway;
 import com.yss.filesys.domain.model.FileTransferTask;
 import com.yss.filesys.domain.model.TransferTaskStatus;
@@ -59,6 +61,20 @@ public class FileTransferTaskGatewayImpl implements FileTransferTaskGateway {
     }
 
     @Override
+    public PageDTO<FileTransferTask> pageByUserId(String userId, Integer statusType, String keyword, long pageIndex, long pageSize) {
+        Page<FileTransferTaskPO> page = fileTransferTaskMapper.selectPage(
+                Page.of(pageIndex + 1, pageSize),
+                buildQuery(userId, statusType, keyword)
+        );
+        return PageDTO.<FileTransferTask>builder()
+                .total(page.getTotal())
+                .pageIndex(pageIndex)
+                .pageSize(pageSize)
+                .records(page.getRecords().stream().map(FileTransferTaskConvertor::toDomain).toList())
+                .build();
+    }
+
+    @Override
     public List<FileTransferTask> listFinishedBefore(LocalDateTime cutoff) {
         return fileTransferTaskMapper.selectList(new LambdaQueryWrapper<FileTransferTaskPO>()
                         .in(FileTransferTaskPO::getStatus, List.of(
@@ -101,9 +117,16 @@ public class FileTransferTaskGatewayImpl implements FileTransferTaskGateway {
     }
 
     private LambdaQueryWrapper<FileTransferTaskPO> buildQuery(String userId, Integer statusType) {
+        return buildQuery(userId, statusType, null);
+    }
+
+    private LambdaQueryWrapper<FileTransferTaskPO> buildQuery(String userId, Integer statusType, String keyword) {
         LambdaQueryWrapper<FileTransferTaskPO> query = new LambdaQueryWrapper<FileTransferTaskPO>()
                 .eq(FileTransferTaskPO::getUserId, userId)
                 .orderByDesc(FileTransferTaskPO::getCreatedAt);
+        if (keyword != null && !keyword.isBlank()) {
+            query.like(FileTransferTaskPO::getFileName, keyword.trim());
+        }
         if (statusType == null) {
             return query;
         }
